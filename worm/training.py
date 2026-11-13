@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -19,6 +21,16 @@ NORM_FILE = "vecnormalize.pkl"
 
 def _make_env() -> Monitor:
     return Monitor(WormGoalEnv(), info_keywords=("is_success",))
+
+
+def _strip_system_info(archive: Path) -> None:
+    """Remove the file in which SB3 records the OS and hardware of the training machine."""
+    clean = archive.with_suffix(".tmp")
+    with zipfile.ZipFile(archive) as source, zipfile.ZipFile(clean, "w") as target:
+        for item in source.infolist():
+            if item.filename != "system_info.txt":
+                target.writestr(item, source.read(item.filename))
+    shutil.move(clean, archive)
 
 
 def train(steps: int, n_envs: int, seed: int, out: Path, verbose: int = 0) -> Path:
@@ -42,6 +54,7 @@ def train(steps: int, n_envs: int, seed: int, out: Path, verbose: int = 0) -> Pa
     )
     model.learn(total_timesteps=steps)
     model.save(out / POLICY_FILE)
+    _strip_system_info(out / POLICY_FILE)
     env.save(str(out / NORM_FILE))
     env.close()
     return out
