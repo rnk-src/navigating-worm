@@ -43,19 +43,7 @@ def test_train_then_eval_route_writes_a_result_table(tmp_path: Path) -> None:
     assert "success: 0/2" in evaluated.stdout
 
 
-def test_eval_route_can_record_a_video_of_the_first_run(tmp_path: Path) -> None:
-    import pytest
-
-    from worm.env import WormGoalEnv
-
-    try:
-        probe = WormGoalEnv(render_mode="rgb_array")
-        probe.reset(seed=0)
-        probe.render()
-        probe.close()
-    except Exception as error:  # no GL backend on this machine
-        pytest.skip(f"rendering unavailable: {error}")
-
+def test_eval_route_can_record_a_video_of_the_first_run(tmp_path: Path, rendering: None) -> None:
     run("train.py", "--steps", "256", "--n-envs", "1", "--out", str(tmp_path / "run"))
     video = tmp_path / "route.mp4"
     evaluated = run(

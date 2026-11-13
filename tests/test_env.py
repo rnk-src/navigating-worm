@@ -182,14 +182,14 @@ def test_more_forward_friction_slows_the_worm() -> None:
     assert travel(TerrainClass.CONCRETE) > travel(TerrainClass.SAND)
 
 
-def test_render_returns_an_rgb_frame_only_in_rgb_array_mode() -> None:
+def test_render_returns_nothing_without_a_render_mode() -> None:
     assert nominal_env().render() is None
+
+
+def test_render_returns_an_rgb_frame_in_rgb_array_mode(rendering: None) -> None:
     env = nominal_env(render_mode="rgb_array")
     env.reset(seed=0)
-    try:
-        frame = env.render()
-    except Exception as error:  # no GL backend on this machine
-        pytest.skip(f"rendering unavailable: {error}")
+    frame = env.render()
     assert frame is not None and frame.shape == (480, 640, 3)
     assert frame.std() > 0  # not a blank image
     env.close()
