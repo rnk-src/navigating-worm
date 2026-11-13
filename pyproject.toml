@@ -5,7 +5,15 @@ description = "A servo-driven worm robot that learns a terrain-adaptive gait wit
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "gymnasium>=1.0,<2",
+    "imageio>=2.38.1",
+    "imageio-ffmpeg>=0.8.1",
+    "mujoco>=3.2",
+    "numpy>=2.4.6",
+    "stable-baselines3>=2.9,<3",
+    "tensorboard>=2.21.0",
+]
 
 [dependency-groups]
 dev = ["ruff>=0.8", "mypy>=1.13", "pytest>=8"]
@@ -25,6 +33,11 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.mypy]
 strict = true
+
+[[tool.mypy.overrides]]
+module = ["mujoco.*", "stable_baselines3.*"]
+ignore_missing_imports = true
+follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
