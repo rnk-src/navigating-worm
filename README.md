@@ -10,18 +10,21 @@ Milestone 1, the simulation MVP, is complete. The hardware milestones have not s
 ## M1 result
 The task: follow a 100 m route of waypoints, 2 m apart, with a 15 cm arrival tolerance. Each run has random friction, servo dynamics and mass. A run fails if any waypoint takes more than 60 s.
 
-| Controller | Routes completed |
-|---|---|
-| PPO policy, 3M steps (about 14 minutes on a laptop CPU) | **9 / 10** |
-| Hand-written steering on the open-loop gait | 6 / 10 |
+| Controller | 10 routes | 50 routes |
+|---|---|---|
+| PPO policy, training seed 0 (committed in `results/policy`) | **10 / 10** | **49 / 50** |
+| PPO policy, training seed 1 | – | 49 / 50 |
+| PPO policy, training seed 2 | – | 49 / 50 |
+| Hand-written steering on the open-loop gait | 8 / 10 | – |
 
-The full table is in [results/route_eval.json](results/route_eval.json). A video of the first 30 s is in [results/route.mp4](results/route.mp4).
+Each policy trains for 3M steps, about 14 minutes on a laptop CPU. The tables are in [results/](results/). A video of the first 30 s of a route is in [results/route.mp4](results/route.mp4).
 
 [results/showcase.mp4](results/showcase.mp4) shows the policy on a short route that turns in every direction. The left half follows the worm. The right half is a top-down map: red waypoints are pending, grey ones are reached, blue dots are the trail. This video uses nominal physics, not randomized physics.
 
 Known limits:
-- The one failed run has high forward friction and a low lateral-to-forward ratio (0.55 and 2.1). The worm never reaches the first waypoint there.
-- This is one training seed and one set of 10 eval seeds.
+- All three policies fail the same route. It has a lateral-to-forward friction ratio of 2.15, near the bottom of the randomized range (2 to 6), with high forward friction.
+- Mass randomization has little effect at present: inertia is not scaled, and the drag scales with the mass.
+- The policy always sees the "concrete" terrain input in M1, whatever the friction is.
 - The friction model is a simplification. See below.
 
 ## How it works
