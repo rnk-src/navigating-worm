@@ -9,3 +9,5 @@ checkpoints/
 *.zip
 *.mp4
 .DS_Store
+runs/
+*.log
