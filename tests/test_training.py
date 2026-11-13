@@ -26,3 +26,12 @@ def test_loaded_policy_maps_an_observation_to_a_bounded_deterministic_action(
     assert action.shape == (7,) and action.dtype == np.float32
     assert np.all(np.abs(action) <= 1.0)
     assert np.array_equal(action, policy(obs))
+
+
+def test_saved_policy_archive_does_not_record_the_training_machine(run_dir: Path) -> None:
+    import zipfile
+
+    with zipfile.ZipFile(run_dir / "policy.zip") as archive:
+        names = archive.namelist()
+    assert "system_info.txt" not in names
+    assert "policy.pth" in names  # the weights are still there
