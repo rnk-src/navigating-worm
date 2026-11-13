@@ -29,8 +29,6 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
     target mid-episode without moving the body, which route following uses.
     """
 
-    metadata = {"render_modes": ["rgb_array"], "render_fps": 20}
-
     def __init__(
         self,
         spec: WormSpec | None = None,
@@ -42,6 +40,10 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         render_mode: str | None = None,
     ) -> None:
         self.spec_ = spec or WormSpec()
+        self.metadata = {
+            "render_modes": ["rgb_array"],
+            "render_fps": round(1.0 / self.spec_.control_dt),
+        }
         self.actions = action_spec(self.spec_)
         self.layout = obs_layout(self.spec_)
         self.randomizer = randomizer or DomainRandomizer()
@@ -73,6 +75,7 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         self._steps = 0
         self._prev_action = np.zeros(self.actions.dim)
         self._prev_joint_pos = np.zeros(self.spec_.n_joints)
+        self._joint_delta = np.zeros(self.spec_.n_joints)
         self._state = StepState(0.0, 0.0)
 
     def reset(
@@ -91,24 +94,34 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         self._phase = float(rng.uniform(0.0, 2.0 * math.pi))
         self._prev_action = np.zeros(self.actions.dim)
         self._prev_joint_pos = np.zeros(self.spec_.n_joints)
+        self._joint_delta = np.zeros(self.spec_.n_joints)
         if options and "target" in options:
             target = np.asarray(options["target"], dtype=np.float64)
         else:
             angle = rng.uniform(-math.pi, math.pi)
             target = rng.uniform(*self.target_range) * np.array([math.cos(angle), math.sin(angle)])
-        self.set_target(target)
-        return self._observe(), self._info({})
+        return self.set_target(target), self._info({})
 
     @property
     def target(self) -> Array:
         return self._target.copy()
 
-    def set_target(self, target: Array) -> None:
-        """Move the target and restart the episode clock. The body keeps its state."""
+    @property
+    def head_xy(self) -> Array:
+        xy: Array = self.data.xpos[self._head, :2].copy()
+        return xy
+
+    def set_target(self, target: Array) -> NDArray[np.float32]:
+        """Move the target and restart the episode clock. The body keeps its state.
+
+        Return the observation of the new target.
+        """
         self._target = np.asarray(target, dtype=np.float64).copy()
         self.model.site("target").pos[:2] = self._target
+        mujoco.mj_kinematics(self.model, self.data)  # refresh the target marker position
         self._steps = 0
         self._state = self._step_state()
+        return self._observe(advance=False)
 
     def step(
         self, action: NDArray[np.float32]
@@ -196,14 +209,17 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         flipped = abs(roll) > _FLIP_ANGLE or abs(pitch) > _FLIP_ANGLE
         return StepState(distance, bearing, distance < self.tolerance, flipped)
 
-    def _observe(self) -> NDArray[np.float32]:
+    def _observe(self, advance: bool = True) -> NDArray[np.float32]:
+        """Build the observation. `advance=False` keeps the joint-motion reference unchanged."""
         obs = np.zeros(self.layout.dim, dtype=np.float32)
         slices = self.layout.slices
         for name, value in self._sensors.read(self.data, self._target, self.np_random).items():
             obs[slices[name]] = value
-        joint_pos = obs[slices["joint_pos"]].astype(np.float64)
-        obs[slices["joint_delta"]] = joint_pos - self._prev_joint_pos
-        self._prev_joint_pos = joint_pos
+        if advance:
+            joint_pos = obs[slices["joint_pos"]].astype(np.float64)
+            self._joint_delta = joint_pos - self._prev_joint_pos
+            self._prev_joint_pos = joint_pos
+        obs[slices["joint_delta"]] = self._joint_delta
         obs[slices["prev_action"]] = self._prev_action
         terrain = self.terrain if self.terrain is not None else TerrainClass.CONCRETE
         obs[slices["terrain"].start + int(terrain)] = 1.0
@@ -214,6 +230,6 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
             "distance": self._state.distance,
             "reached": self._state.reached,
             "is_success": self._state.reached,
-            "head_xy": self.data.xpos[self._head, :2].copy(),
+            "head_xy": self.head_xy,
             "reward_terms": terms,
         }

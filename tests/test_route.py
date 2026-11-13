@@ -87,3 +87,37 @@ def test_showcase_route_heads_in_all_four_compass_directions_with_both_turn_sens
     assert turns.max() >= 90.0 and turns.min() <= -90.0  # a sharp left and a sharp right
     lengths = np.linalg.norm(legs, axis=1)
     assert lengths.min() >= 0.8 and lengths.max() <= 2.0  # inside the trained target range
+
+
+def test_split_seed_gives_two_independent_deterministic_streams() -> None:
+    from worm.route import split_seed
+
+    route_seed, env_seed = split_seed(1000)
+    assert (route_seed, env_seed) == split_seed(1000)
+    assert len({route_seed, env_seed, 1000}) == 3
+    assert split_seed(1001) != split_seed(1000)
+    first_draws = [np.random.default_rng(s).uniform() for s in (route_seed, env_seed)]
+    assert first_draws[0] != first_draws[1]
+
+
+def test_policy_sees_the_new_waypoint_on_the_step_after_a_switch() -> None:
+    seen: list[float] = []
+
+    def spy(obs: NDArray[np.float32]) -> NDArray[np.float32]:
+        seen.append(float(obs[13]) * 3.0)  # distance observation, back in metres
+        return idle(obs)
+
+    # The first waypoint is inside the tolerance, so it is reached on step 1.
+    run_route(spy, nominal_env(0.5), np.array([[0.14, 0.0], [2.0, 0.0]]), seed=0)
+    assert seen[0] == pytest.approx(0.14, abs=0.1)
+    assert seen[1] == pytest.approx(2.0, abs=0.15)  # not the 0.14 m of the old waypoint
+
+
+def test_empty_route_is_rejected_with_a_clear_error() -> None:
+    with pytest.raises(ValueError, match="no waypoints"):
+        run_route(idle, nominal_env(0.5), np.empty((0, 2)), seed=0)
+
+
+def test_route_shorter_than_half_the_spacing_is_rejected() -> None:
+    with pytest.raises(ValueError, match="shorter than"):
+        make_waypoints(0.5, 2.0, np.random.default_rng(0))
