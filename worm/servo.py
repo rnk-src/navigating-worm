@@ -19,6 +19,7 @@ class ServoParams:
     lag_tau: float = 0.03  # s, first-order lag time constant
     deadband: float = 0.01  # rad, smaller target changes are ignored
     speed_scale: float = 1.0  # multiplies the speed cap (voltage sag lowers it)
+    strength: float = 1.0  # multiplies stall torque and stiffness
 
 
 class ServoModel:
