@@ -18,11 +18,9 @@ class PhysicsParams:
     servo: ServoParams = ServoParams()
     sensor: SensorParams = SensorParams()
     mass_scale: float = 1.0
+    terrain: TerrainClass = TerrainClass.CONCRETE
 
 
-# M1 trains one policy on a single wide friction range that covers every class.
-_WIDE_FORWARD = (0.15, 0.8)
-_WIDE_RATIO = (2.0, 6.0)
 _NOMINAL_RATIO = terrain.NOMINAL.mu_lateral / terrain.NOMINAL.mu_forward
 
 
@@ -35,16 +33,19 @@ class DomainRandomizer:
     def _span(self, rng: np.random.Generator, nominal: float, low: float, high: float) -> float:
         return nominal + self.level * (float(rng.uniform(low, high)) - nominal)
 
+    def _shrink(self, nominal: float, value: float) -> float:
+        return value if self.level == 1.0 else nominal + self.level * (value - nominal)
+
     def sample(self, rng: np.random.Generator, cls: TerrainClass | None = None) -> PhysicsParams:
-        """Sample one episode. `cls=None` uses the wide M1 friction range."""
-        if self.level == 0.0:
-            return PhysicsParams()
+        """Sample one episode. `cls=None` draws a terrain class uniformly."""
         if cls is None:
-            mu_forward = self._span(rng, terrain.NOMINAL.mu_forward, *_WIDE_FORWARD)
-            ratio = self._span(rng, _NOMINAL_RATIO, *_WIDE_RATIO)
-            fric = FrictionParams(mu_forward, mu_forward * ratio)
-        else:
-            fric = terrain.params(cls, rng)
+            cls = TerrainClass(int(rng.integers(len(TerrainClass))))
+        if self.level == 0.0:
+            return PhysicsParams(terrain=cls)
+        raw = terrain.params(cls, rng)
+        mu_forward = self._shrink(terrain.NOMINAL.mu_forward, raw.mu_forward)
+        ratio = self._shrink(_NOMINAL_RATIO, raw.mu_lateral / raw.mu_forward)
+        fric = FrictionParams(mu_forward, mu_forward * ratio)
         servo = ServoParams(
             delay_steps=int(rng.integers(1, 2 + round(2 * self.level))),
             lag_tau=self._span(rng, 0.03, 0.01, 0.06),
@@ -52,4 +53,5 @@ class DomainRandomizer:
             speed_scale=self._span(rng, 1.0, 0.7, 1.1),
             strength=self._span(rng, 1.0, 0.7, 1.1),
         )
-        return PhysicsParams(fric, servo, SensorParams(), self._span(rng, 1.0, 0.8, 1.3))
+        mass = self._span(rng, 1.0, 0.8, 1.3)
+        return PhysicsParams(fric, servo, SensorParams(), mass, cls)
