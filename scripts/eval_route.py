@@ -9,8 +9,9 @@ from pathlib import Path
 import numpy as np
 
 from worm.env import WormGoalEnv
-from worm.route import make_waypoints, run_route
+from worm.route import make_waypoints, run_route, split_seed
 from worm.training import load_policy
+from worm.video import FrameRecorder
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -28,22 +29,19 @@ if __name__ == "__main__":
     policy = load_policy(args.policy)
     rows = []
     for run in range(args.runs):
-        seed = args.seed + run
+        route_seed, env_seed = split_seed(args.seed + run)
         record = args.video is not None and run == 0
         env = WormGoalEnv(episode_seconds=args.timeout, render_mode="rgb_array" if record else None)
-        frames: list[np.ndarray] = []
-
-        def grab(env: WormGoalEnv = env, frames: list[np.ndarray] = frames) -> None:
-            frame = env.render()
-            if frame is not None and len(frames) < round(args.video_seconds * 20):
-                frames.append(frame)
-
-        waypoints = make_waypoints(args.length, args.spacing, np.random.default_rng(seed))
-        result = run_route(policy, env, waypoints, seed=seed, on_step=grab if record else None)
-        if frames:
+        fps = env.metadata["render_fps"]
+        recorder = FrameRecorder(env.render, max_frames=round(args.video_seconds * fps))
+        waypoints = make_waypoints(args.length, args.spacing, np.random.default_rng(route_seed))
+        result = run_route(
+            policy, env, waypoints, seed=env_seed, on_step=recorder if record else None
+        )
+        if recorder.frames:
             import imageio.v2 as imageio
 
-            imageio.mimsave(args.video, frames, fps=20)
+            imageio.mimsave(args.video, recorder.frames, fps=fps)
         rows.append(
             {
                 "run": run,
