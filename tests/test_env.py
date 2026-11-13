@@ -237,3 +237,45 @@ def test_markers_are_drawn_in_their_own_colour(rendering: None) -> None:
     marked = env.render()
     assert plain is not None and marked is not None
     assert blue_pixels(plain) == 0 and blue_pixels(marked) > 50
+
+
+def test_target_marker_is_at_the_target_immediately_after_reset_and_set_target() -> None:
+    env = nominal_env()
+    env.reset(seed=0, options={"target": (2.0, -1.0)})
+    assert env.data.site("target").xpos[:2] == pytest.approx([2.0, -1.0])
+    env.set_target(np.array([0.5, 0.7]))
+    assert env.data.site("target").xpos[:2] == pytest.approx([0.5, 0.7])
+
+
+def test_set_target_returns_an_observation_of_the_new_target() -> None:
+    env = nominal_env()
+    env.reset(seed=0, options={"target": (0.3, 0.0)})
+    obs = env.set_target(np.array([0.0, 2.4]))
+    assert obs_part(env, obs, "distance")[0] * 3.0 == pytest.approx(2.4, abs=0.15)
+
+
+def test_set_target_does_not_disturb_the_joint_motion_observation() -> None:
+    env = nominal_env()
+    env.reset(seed=0, options={"target": (5.0, 0.0)})
+    for _ in range(5):
+        obs, *_ = env.step(GO)
+    delta = obs_part(env, obs, "joint_delta").copy()
+    assert np.abs(delta).max() > 0.01
+    switched = env.set_target(np.array([0.0, 2.0]))
+    assert obs_part(env, switched, "joint_delta") == pytest.approx(delta)
+
+
+def test_head_xy_matches_the_step_info() -> None:
+    env = nominal_env()
+    env.reset(seed=0, options={"target": (5.0, 0.0)})
+    for _ in range(20):
+        _, _, _, _, info = env.step(GO)
+    assert np.linalg.norm(env.head_xy) > 0.01
+    assert np.array_equal(env.head_xy, info["head_xy"])
+
+
+def test_render_fps_follows_the_control_rate() -> None:
+    from worm.spec import WormSpec
+
+    assert WormGoalEnv().metadata["render_fps"] == 20
+    assert WormGoalEnv(spec=WormSpec(control_dt=0.1)).metadata["render_fps"] == 10
