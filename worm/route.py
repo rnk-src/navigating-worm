@@ -28,6 +28,8 @@ def make_waypoints(
     length: float, spacing: float, rng: np.random.Generator, max_turn: float = math.radians(30.0)
 ) -> Array:
     """Return a wandering route of `length` metres from the origin, as (n, 2) points."""
+    if round(length / spacing) < 1:
+        raise ValueError(f"route length {length} m is shorter than half the spacing {spacing} m")
     heading = rng.uniform(-math.pi, math.pi)
     point = np.zeros(2)
     points = []
@@ -36,6 +38,12 @@ def make_waypoints(
         points.append(point)
         heading += rng.uniform(-max_turn, max_turn)
     return np.array(points)
+
+
+def split_seed(seed: int) -> tuple[int, int]:
+    """Return independent (route seed, env seed) so route shape and physics do not correlate."""
+    route_seed, env_seed = np.random.SeedSequence(seed).generate_state(2)
+    return int(route_seed), int(env_seed)
 
 
 def showcase_waypoints() -> Array:
@@ -66,6 +74,8 @@ def run_route(
 
     The per-waypoint timeout is the env's episode length. The tolerance is the env's.
     """
+    if len(waypoints) == 0:
+        raise ValueError("the route has no waypoints")
     obs, _ = env.reset(seed=seed, options={"target": waypoints[0]})
     trajectory = []
     reached = 0
@@ -77,7 +87,7 @@ def run_route(
         if info["reached"]:
             reached += 1
             if reached < len(waypoints):
-                env.set_target(waypoints[reached])
+                obs = env.set_target(waypoints[reached])
         elif terminated or truncated:
             break
     return RouteResult(
