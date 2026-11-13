@@ -38,6 +38,23 @@ def make_waypoints(
     return np.array(points)
 
 
+def showcase_waypoints() -> Array:
+    """Return a short demo route that heads in every compass direction, with sharp turns."""
+    return np.array(
+        [
+            [1.2, 0.0],  # east
+            [1.2, 1.2],  # north (left turn)
+            [0.0, 1.2],  # west (left turn)
+            [0.0, 2.4],  # north (right turn)
+            [1.2, 2.4],  # east (right turn)
+            [2.4, 1.2],  # south-east
+            [2.4, 0.0],  # south
+            [1.2, -1.0],  # south-west
+            [0.0, 0.0],  # north-west, back to the start
+        ]
+    )
+
+
 def run_route(
     policy: Policy,
     env: WormGoalEnv,
