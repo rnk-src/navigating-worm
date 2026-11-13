@@ -60,3 +60,27 @@ def test_eval_route_can_record_a_video_of_the_first_run(tmp_path: Path, renderin
     frames = imageio.mimread(video)
     assert len(frames) == 20  # 1 s at 20 frames per second
     assert frames[0].shape == (480, 640, 3)
+
+
+def test_showcase_writes_a_sped_up_overview_video(tmp_path: Path, rendering: None) -> None:
+    run("train.py", "--steps", "256", "--n-envs", "1", "--out", str(tmp_path / "run"))
+    video = tmp_path / "showcase.mp4"
+    made = run(
+        "showcase.py",
+        "--policy", str(tmp_path / "run"),
+        "--out", str(video),
+        "--timeout", "2",
+        "--speed", "2",
+    )  # fmt: skip
+    assert made.returncode == 0, made.stderr
+    import imageio.v2 as imageio
+
+    frames = imageio.mimread(video)
+    assert len(frames) == 20  # 2 s of sim at 20 Hz, every 2nd frame kept
+    assert frames[0].shape == (480, 1280, 3)  # close-up on the left, overview on the right
+    left, right = frames[0][:, :640], frames[0][:, 640:]
+    green = lambda img: int((img[..., 1].astype(int) - img[..., 0].astype(int) > 40).sum())  # noqa: E731
+    assert green(left) > 5 * green(right) > 0  # the worm is much larger in the close-up
+    assert "reached 0/9" in made.stdout  # an untrained policy reaches nothing in 2 s
+    red = frames[0][..., 0].astype(int) - frames[0][..., 1].astype(int) > 80
+    assert red.sum() > 200  # the waypoint markers are in the picture

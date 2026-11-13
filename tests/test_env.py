@@ -193,3 +193,47 @@ def test_render_returns_an_rgb_frame_in_rgb_array_mode(rendering: None) -> None:
     assert frame is not None and frame.shape == (480, 640, 3)
     assert frame.std() > 0  # not a blank image
     env.close()
+
+
+def green_centroid(frame: np.ndarray) -> np.ndarray:
+    """Pixel (row, col) centre of the green worm body."""
+    r, g, b = (frame[..., i].astype(int) for i in range(3))
+    rows, cols = np.nonzero((g > r + 40) & (g > b + 40))
+    assert len(rows) > 0, "the worm is not visible"
+    return np.array([rows.mean(), cols.mean()])
+
+
+def frames_before_and_after_moving(env: WormGoalEnv) -> tuple[np.ndarray, np.ndarray]:
+    env.reset(seed=0, options={"target": (5.0, 0.0)})
+    before = env.render()
+    for _ in range(100):
+        env.step(GO)
+    after = env.render()
+    assert before is not None and after is not None
+    return before, after
+
+
+def test_follow_camera_keeps_the_worm_in_place_on_screen(rendering: None) -> None:
+    before, after = frames_before_and_after_moving(nominal_env(render_mode="rgb_array"))
+    assert np.linalg.norm(green_centroid(after) - green_centroid(before)) < 40
+
+
+def test_overview_camera_stays_fixed_so_the_worm_moves_across_the_screen(rendering: None) -> None:
+    env = nominal_env(render_mode="rgb_array")
+    env.set_overview(center=(0.0, 0.0), half_extent=1.0)
+    before, after = frames_before_and_after_moving(env)
+    assert np.linalg.norm(green_centroid(after) - green_centroid(before)) > 40
+
+
+def test_markers_are_drawn_in_their_own_colour(rendering: None) -> None:
+    def blue_pixels(frame: np.ndarray) -> int:
+        r, g, b = (frame[..., i].astype(int) for i in range(3))
+        return int(((b > r + 60) & (b > g + 60)).sum())
+
+    env = nominal_env(render_mode="rgb_array")
+    env.reset(seed=0, options={"target": (5.0, 0.0)})
+    plain = env.render()
+    env.markers = [((0.2, 0.2), (0.0, 0.0, 1.0, 1.0), 0.04)]
+    marked = env.render()
+    assert plain is not None and marked is not None
+    assert blue_pixels(plain) == 0 and blue_pixels(marked) > 50

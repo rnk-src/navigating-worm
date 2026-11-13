@@ -47,7 +47,8 @@ def to_xml(spec: WormSpec) -> str:
   <asset>
     <texture name="grid" type="2d" builtin="checker" rgb1="0.85 0.85 0.85"
              rgb2="0.7 0.7 0.7" width="256" height="256"/>
-    <material name="grid" texture="grid" texrepeat="4 4" texuniform="true"/>
+    <material name="grid" texture="grid" texrepeat="4 4" texuniform="true"
+              specular="0" shininess="0"/>
   </asset>
   <worldbody>
     <light pos="0 0 3" dir="0 0 -1" directional="true"/>

@@ -72,3 +72,18 @@ def test_on_step_callback_runs_once_per_control_step() -> None:
         idle, nominal_env(0.5), np.array([[5.0, 0.0]]), seed=0, on_step=lambda: calls.append(1)
     )
     assert len(calls) == len(result.trajectory) == 10
+
+
+def test_showcase_route_heads_in_all_four_compass_directions_with_both_turn_senses() -> None:
+    from worm.route import showcase_waypoints
+
+    points = np.vstack([[0.0, 0.0], showcase_waypoints()])
+    legs = np.diff(points, axis=0)
+    headings = np.degrees(np.arctan2(legs[:, 1], legs[:, 0]))
+    for compass in (0.0, 90.0, 180.0, -90.0):
+        gap = np.abs((headings - compass + 180.0) % 360.0 - 180.0)
+        assert gap.min() <= 45.0, f"no leg heads within 45 deg of {compass}"
+    turns = (np.diff(headings) + 180.0) % 360.0 - 180.0
+    assert turns.max() >= 90.0 and turns.min() <= -90.0  # a sharp left and a sharp right
+    lengths = np.linalg.norm(legs, axis=1)
+    assert lengths.min() >= 0.8 and lengths.max() <= 2.0  # inside the trained target range

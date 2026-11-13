@@ -51,6 +51,10 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         self.target_range = target_range
         self.render_mode = render_mode
         self._renderer: mujoco.Renderer | None = None
+        self._overview: tuple[tuple[float, float], float] | None = None
+        # Extra spheres to draw: (xy, rgba, radius). Rendering only.
+        self.markers: list[tuple[tuple[float, float], tuple[float, float, float, float], float]]
+        self.markers = []
 
         self.model = model.build(self.spec_)
         self.data = mujoco.MjData(self.model)
@@ -95,6 +99,10 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         self.set_target(target)
         return self._observe(), self._info({})
 
+    @property
+    def target(self) -> Array:
+        return self._target.copy()
+
     def set_target(self, target: Array) -> None:
         """Move the target and restart the episode clock. The body keeps its state."""
         self._target = np.asarray(target, dtype=np.float64).copy()
@@ -127,15 +135,40 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         truncated = self._steps >= self.max_steps and not terminated
         return self._observe(), value, terminated, truncated, self._info(terms)
 
+    def set_overview(self, center: tuple[float, float] | None, half_extent: float = 1.0) -> None:
+        """Render from a fixed top-down camera that frames `center` +- `half_extent` metres.
+
+        `center=None` returns to the camera that follows the head.
+        """
+        self._overview = None if center is None else (center, half_extent)
+
     def render(self) -> NDArray[np.uint8] | None:
         if self.render_mode != "rgb_array":
             return None
         if self._renderer is None:
             self._renderer = mujoco.Renderer(self.model, 480, 640)
         camera = mujoco.MjvCamera()
-        camera.lookat[:2] = self.data.xpos[self._head, :2]
-        camera.distance, camera.elevation, camera.azimuth = 1.5, -60.0, 90.0
+        if self._overview is None:
+            camera.lookat[:2] = self.data.xpos[self._head, :2]
+            camera.distance, camera.elevation, camera.azimuth = 1.5, -60.0, 90.0
+        else:
+            center, half_extent = self._overview
+            camera.lookat[:2] = center
+            # The vertical field of view is 45 degrees. Leave a 20 % margin.
+            camera.distance = 1.2 * half_extent / math.tan(math.radians(22.5))
+            camera.elevation, camera.azimuth = -90.0, 90.0
         self._renderer.update_scene(self.data, camera)
+        scene = self._renderer.scene
+        for xy, rgba, radius in self.markers[: scene.maxgeom - scene.ngeom]:
+            mujoco.mjv_initGeom(
+                scene.geoms[scene.ngeom],
+                mujoco.mjtGeom.mjGEOM_SPHERE,
+                np.full(3, radius),
+                np.array([xy[0], xy[1], radius]),
+                np.eye(3).flatten(),
+                np.asarray(rgba, dtype=np.float32),
+            )
+            scene.ngeom += 1
         frame: NDArray[np.uint8] = self._renderer.render()
         return frame
 
