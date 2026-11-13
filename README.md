@@ -17,6 +17,8 @@ The task: follow a 100 m route of waypoints, 2 m apart, with a 15 cm arrival tol
 
 The full table is in [results/route_eval.json](results/route_eval.json). A video of the first 30 s is in [results/route.mp4](results/route.mp4).
 
+[results/showcase.mp4](results/showcase.mp4) shows the policy on a short route that turns in every direction. The left half follows the worm. The right half is a top-down map: red waypoints are pending, grey ones are reached, blue dots are the trail. This video uses nominal physics, not randomized physics.
+
 Known limits:
 - The one failed run has high forward friction and a low lateral-to-forward ratio (0.55 and 2.1). The worm never reaches the first waypoint there.
 - This is one training seed and one set of 10 eval seeds.
@@ -38,6 +40,7 @@ Install [uv](https://docs.astral.sh/uv/), then:
 make check                                   # format, lint, types, tests
 uv run python scripts/train.py --out runs/ppo
 uv run python scripts/eval_route.py --policy results/policy --video route.mp4
+uv run python scripts/showcase.py            # writes results/showcase.mp4
 ```
 
 ## License
