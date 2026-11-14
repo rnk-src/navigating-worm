@@ -37,3 +37,11 @@ def params(cls: TerrainClass, rng: np.random.Generator) -> FrictionParams:
     forward_range, ratio_range = _RANGES[cls]
     mu_forward = float(rng.uniform(*forward_range))
     return FrictionParams(mu_forward, mu_forward * float(rng.uniform(*ratio_range)))
+
+
+# Per class: amplitude of the fine surface relief, in metres. Sand is smooth.
+ROUGHNESS: dict[TerrainClass, float] = {
+    TerrainClass.CONCRETE: 0.004,
+    TerrainClass.GRASS: 0.002,
+    TerrainClass.SAND: 0.0,
+}
