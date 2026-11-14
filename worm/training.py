@@ -25,6 +25,8 @@ from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNorm
 
 from worm.curriculum import N_LEVELS, WorldCurriculum
 from worm.env import WormGoalEnv
+from worm.evaluate import evaluate_terrain
+from worm.navigate import NavConfig
 from worm.randomize import DomainRandomizer
 from worm.spec import WormSpec, action_spec, obs_layout
 
@@ -353,6 +355,60 @@ class CheckpointCallback(BaseCallback):  # type: ignore[misc]
         return True
 
 
+class NavEvalCallback(BaseCallback):  # type: ignore[misc]
+    """Drive planned routes on seeded worlds with the current policy, every `every_steps`.
+
+    It logs `eval/nav_success` and the speed per terrain class, and stores them for
+    `progress.json`. The worlds are of the current curriculum level, at least level 1.
+    """
+
+    _SEED = 1000
+    # An untrained policy must fail fast: one eval may not stall the run.
+    _NAV = NavConfig(max_replans=2, max_seconds=400.0)
+
+    def __init__(self, run: _Run) -> None:
+        super().__init__()
+        self._run = run
+        self._next = 0
+
+    def _on_training_start(self) -> None:
+        every = self._run.cfg.eval.every_steps
+        self._next = (self.num_timesteps // every + 1) * every
+
+    def _policy(self, obs: NDArray[np.float32]) -> NDArray[np.float32]:
+        norm = self.model.get_vec_normalize_env()
+        action, _ = self.model.predict(norm.normalize_obs(obs), deterministic=True)
+        return np.clip(np.asarray(action, dtype=np.float32), -1.0, 1.0)
+
+    def _on_step(self) -> bool:
+        if self.num_timesteps < self._next:
+            return True
+        cfg = self._run.cfg
+        self._next += cfg.eval.every_steps
+        level = max(1, 0 if self._run.curriculum is None else self._run.curriculum.level)
+        result = evaluate_terrain(
+            self._policy,
+            cfg.env.obs_version,
+            cfg.eval.maps,
+            cfg.eval.map_size,
+            (level,),
+            self._SEED,
+            nav_cfg=self._NAV,
+        )["overall"]
+        speed = {name: round(row["mean_speed"], 4) for name, row in result["per_class"].items()}
+        self.logger.record("eval/nav_success", result["success_rate"])
+        self.logger.record("eval/level", level)
+        for name, value in speed.items():
+            self.logger.record(f"eval/speed_{name}", value)
+        self._run.eval = {
+            "steps": int(self.num_timesteps),
+            "level": level,
+            "nav_success": result["success_rate"],
+            "speed": speed,
+        }
+        return True
+
+
 @dataclass
 class _Run:
     """The files of one run and the state that `progress.json` reports."""
@@ -363,6 +419,7 @@ class _Run:
     curriculum: CurriculumCallback | None = None
     started: float = field(default_factory=time.monotonic)
     first_step: int = 0
+    eval: dict[str, Any] | None = None  # the newest navigation eval
 
     def checkpoint(self, done: bool) -> None:
         name = _save_checkpoint(self.model, self.out, self.cfg.checkpoint.keep)
@@ -371,7 +428,7 @@ class _Run:
     def write_progress(self, last_checkpoint: str | None, done: bool) -> None:
         steps = int(self.model.num_timesteps)
         elapsed = max(time.monotonic() - self.started, 1e-9)
-        progress = {
+        progress: dict[str, Any] = {
             "steps": steps,
             "target": self.cfg.run.steps,
             "last_checkpoint": last_checkpoint,
@@ -379,6 +436,8 @@ class _Run:
             "fps": round((steps - self.first_step) / elapsed),
             "done": done,
         }
+        if self.eval is not None:
+            progress["eval"] = self.eval
         (self.out / PROGRESS_FILE).write_text(json.dumps(progress, indent=2) + "\n")
 
 
@@ -424,6 +483,8 @@ def _train_config(cfg: TrainConfig, out: Path, resume: bool = False, verbose: in
         level = int(read_progress(out).get("level", 0)) if resume else 0
         run.curriculum = CurriculumCallback(cfg.curriculum, cfg.run.steps, level)
         callbacks.append(run.curriculum)
+    if cfg.eval.every_steps > 0:
+        callbacks.append(NavEvalCallback(run))
     callbacks.append(CheckpointCallback(run))
 
     previous: dict[int, Any] = {}
