@@ -39,7 +39,7 @@ Known limits:
 - **Friction:** a worm moves because the ground resists sideways motion more than forward motion. MuJoCo's own per-axis contact friction is fixed to world axes, so it does not follow a turning segment. A test demonstrates this. The sim instead applies a smooth body-frame drag to each segment (`worm/friction.py`).
 - **Sim-to-real preparation:** servo delay, lag, deadband and speed cap; sensor quantization, bias and noise; randomized friction, mass and servo strength.
 
-See [docs/PLAN.md](docs/PLAN.md) for the architecture, later milestones and bill of materials.
+See docs/PLAN.md for the architecture, later milestones and bill of materials.
 
 ## Terrain worlds
 `worm/world.py` generates a seeded world: hills, fine roughness, rocks, ditches and a surface class per cell (stone/concrete, grass, sand). The world compiles to a MuJoCo heightfield. Each body segment takes its friction, viscous drag and contact softness from the cell under it, and the policy's terrain input is the class under the head.
@@ -57,7 +57,7 @@ env = WormGoalEnv(world=generate(WorldConfig(size=(10.0, 10.0)), seed=1))
 obs, info = env.reset(seed=0, options={"start": (0.0, 0.0), "target": (2.0, 1.0)})
 ```
 
-The flat-plane env is unchanged; a test pins its trajectory. On slopes the smooth drag model alone creeps downhill, so worlds add real contact friction. [docs/decisions/0002-terrain-world-physics.md](docs/decisions/0002-terrain-world-physics.md) has the measurements.
+The flat-plane env is unchanged; a test pins its trajectory. On slopes the smooth drag model alone creeps downhill, so worlds add real contact friction. docs/decisions/0002-terrain-world-physics.md has the measurements.
 
 The committed policy never trained on a world. On 10 m mixed-surface worlds without obstacles it still reaches 10 of 10 targets with slopes up to 10 degrees, and 9 of 10 with slopes up to 15 degrees. It does not avoid rocks or ditches; that is the planner's task (M2b).
 
@@ -74,7 +74,7 @@ uv run python scripts/navigate.py --policy results/policy --seed 1 --goal 4 3.5 
 uv run python scripts/navigate.py --policy scripted --seed 1 --goal 4 3.5   # no trained policy needed
 ```
 
-With the committed policy, the navigator reached 10 of 10 goals on ten generated 10 m worlds with rocks, ditches and slopes up to 15 degrees. Each goal was at least 4 m away. [docs/decisions/0003-planner.md](docs/decisions/0003-planner.md) has the details.
+With the committed policy, the navigator reached 10 of 10 goals on ten generated 10 m worlds with rocks, ditches and slopes up to 15 degrees. Each goal was at least 4 m away. docs/decisions/0003-planner.md has the details.
 
 ## Click to go
 
@@ -85,7 +85,7 @@ uv run python scripts/demo.py --open
 The page shows a top-down map. Click a point and the worm plans a route and drives it. A click on a rock shows why the goal is refused. A click while the worm drives re-routes it. The sliders make a new map, change the speed and pause the run. Use `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
 
 ## Roadmap
-The next milestones are in [docs/PLAN.md](docs/PLAN.md#milestones), with the reasons for their order in [docs/decisions/](docs/decisions/):
+The next milestones are in docs/PLAN.md, with the reasons for their order in docs/decisions/:
 1. **M2a Terrain world:** seeded heightfield worlds with hills, rocks, ditches and a surface class per cell.
 2. **M2b Planner:** a cost map and A* route over a world, or a reason why no route exists.
 3. **M2c Click to go:** a local web page where a click on the map sends the worm there.

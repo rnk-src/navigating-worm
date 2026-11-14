@@ -15,6 +15,7 @@ A servo-driven worm robot that learns a terrain-adaptive gait with RL in MuJoCo,
 - Plan and drive: `uv run python scripts/navigate.py --policy results/policy --seed 1 --goal 4 3.5`
 
 ## Layout
+- `docs/` is local only and listed in `.gitignore`. It is not in the public repo.
 - `docs/PLAN.md` holds the architecture, module interfaces and milestones. Read it before you change a module.
 - `docs/MVP_PLAN.md` is the execution plan for M2. Follow its task order and its rules.
 - `docs/decisions/` holds one short ADR per decision. Add a new ADR for a new decision.
