@@ -40,6 +40,26 @@ Known limits:
 - **Sim-to-real preparation:** servo delay, lag, deadband and speed cap; sensor quantization, bias and noise; randomized friction, mass and servo strength.
 
 
+## Terrain worlds
+`worm/world.py` generates a seeded world: hills, fine roughness, rocks, ditches and a surface class per cell (stone/concrete, grass, sand). The world compiles to a MuJoCo heightfield. Each body segment takes its friction, viscous drag and contact softness from the cell under it, and the policy's terrain input is the class under the head.
+
+```
+uv run python scripts/make_world.py --seed 1 --size 10 --out map.png   # top-down map
+uv run python scripts/bench_env.py --world 10m                          # env throughput
+```
+
+```python
+from worm.env import WormGoalEnv
+from worm.world import WorldConfig, generate
+
+env = WormGoalEnv(world=generate(WorldConfig(size=(10.0, 10.0)), seed=1))
+obs, info = env.reset(seed=0, options={"start": (0.0, 0.0), "target": (2.0, 1.0)})
+```
+
+The flat-plane env is unchanged; a test pins its trajectory. On slopes the smooth drag model alone creeps downhill, so worlds add real contact friction.
+
+The committed policy never trained on a world. On 10 m mixed-surface worlds without obstacles it still reaches 10 of 10 targets with slopes up to 10 degrees, and 9 of 10 with slopes up to 15 degrees. It does not avoid rocks or ditches; that is the planner's task (M2b).
+
 ## Roadmap
 The next milestones:
 1. **M2a Terrain world:** seeded heightfield worlds with hills, rocks, ditches and a surface class per cell.
