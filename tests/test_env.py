@@ -1,7 +1,11 @@
+import math
+
 import numpy as np
 import pytest
 from gymnasium.utils.env_checker import check_env
 
+from worm import terrain
+from worm import world as wd
 from worm.env import WormGoalEnv
 from worm.randomize import DomainRandomizer
 from worm.terrain import TerrainClass
@@ -302,3 +306,194 @@ def test_mass_scale_also_scales_inertia() -> None:
     scale = env.params.mass_scale
     assert scale != 1.0
     assert env.model.body_inertia[1:] == pytest.approx(nominal[1:] * scale)
+
+
+# Recorded on the flat-plane env before the terrain refactor. Each row holds the first
+# observation's sensor block (yaw rate, roll, pitch, bearing sin and cos, distance),
+# the terrain class, and the head position after 40 GO steps.
+_GOLDEN = [
+    ([-0.00369, -0.012459, -0.007323, 0.387525, 0.921859, 0.901773], 2, [-0.007708, 0.007095]),
+    ([0.000807, -0.004821, 0.005988, -0.068435, -0.997656, 0.55023], 1, [-0.041699, -0.014192]),
+    ([-0.002044, 0.00455, -0.000992, 0.019046, -0.999819, 0.615682], 2, [0.022056, 0.086243]),
+]
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_flat_env_matches_the_m1_golden_trajectory(seed: int) -> None:
+    sensors, terrain_class, head = _GOLDEN[seed]
+    env = WormGoalEnv()
+    obs, _ = env.reset(seed=seed)
+    assert obs[:8] == pytest.approx(np.zeros(8), abs=1e-6)
+    assert obs[8:14] == pytest.approx(sensors, abs=2e-6)
+    assert int(np.argmax(obs[21:24])) == terrain_class
+    for _ in range(40):
+        _, _, _, _, info = env.step(GO)
+    assert info["head_xy"] == pytest.approx(head, abs=2e-6)
+
+
+# --- heightfield worlds ---
+
+
+def split_world(size: float = 4.0) -> wd.World:
+    """Return a flat world: concrete at -x, sand at +x."""
+    base = wd.flat((size, size))
+    surface = base.surface.copy()
+    surface[:, base.shape[1] // 2 :] = TerrainClass.SAND
+    return wd.World(base.heights, surface, base.obstacle, base.cell)
+
+
+def hilly_world(seed: int = 0) -> wd.World:
+    return wd.generate(wd.WorldConfig(size=(4.0, 4.0), n_rocks=0, n_ditches=0), seed)
+
+
+def test_world_env_passes_the_gymnasium_checker() -> None:
+    check_env(WormGoalEnv(world=hilly_world()), skip_render_check=True)
+
+
+def test_world_env_spawns_on_the_terrain_surface() -> None:
+    world = hilly_world()
+    env = WormGoalEnv(world=world, randomizer=DomainRandomizer(0.0))
+    for start in [(0.0, 0.0), (1.2, -0.9), (-1.0, 1.1)]:
+        env.reset(seed=0, options={"start": start, "yaw": 0.3})
+        head = env.data.xpos[1]
+        assert head[:2] == pytest.approx(start, abs=0.03)
+        assert head[2] == pytest.approx(float(world.height_at(head[:2])) + 0.0125, abs=0.005)
+        assert np.abs(env.data.qvel[:3]).max() < 0.05  # it is not falling or sliding
+
+
+def test_reset_start_option_places_the_head() -> None:
+    for env in (nominal_env(), nominal_env(world=wd.flat((4.0, 4.0)))):
+        _, info = env.reset(seed=0, options={"start": (1.0, -0.5), "yaw": math.pi / 2})
+        assert info["head_xy"] == pytest.approx((1.0, -0.5), abs=0.01)
+        assert env.data.xpos[2, :2] == pytest.approx((1.0, -0.56), abs=0.01)  # tail toward -y
+
+
+def test_default_target_is_1_to_3_m_from_the_start() -> None:
+    env = nominal_env()
+    distances = [env.reset(seed=s, options={"start": (7.0, 7.0)})[1]["distance"] for s in range(20)]
+    assert 1.0 <= min(distances) and max(distances) <= 3.0
+    assert env.head_xy == pytest.approx((7.0, 7.0), abs=1e-6)
+
+
+def test_world_targets_lie_inside_the_world_and_off_the_rocks() -> None:
+    world = wd.generate(wd.WorldConfig(size=(4.0, 4.0), n_rocks=8, n_ditches=0), 1)
+    env = WormGoalEnv(world=world)
+    for seed in range(30):
+        env.reset(seed=seed)
+        assert world.contains(env.target)
+        row, col = world.to_cell(env.target)
+        assert not world.obstacle[row, col]
+
+
+def test_terrain_one_hot_is_the_class_under_the_head_in_a_world() -> None:
+    env = WormGoalEnv(world=split_world(), randomizer=DomainRandomizer(0.0))
+    obs, _ = env.reset(seed=0, options={"start": (-1.0, 0.0)})
+    assert obs_part(env, obs, "terrain").tolist() == [1, 0, 0]
+    assert env.surface_under_head == TerrainClass.CONCRETE
+    obs, _ = env.reset(seed=0, options={"start": (1.0, 0.0)})
+    assert obs_part(env, obs, "terrain").tolist() == [0, 0, 1]
+    assert env.surface_under_head == TerrainClass.SAND
+
+
+def test_flat_env_reports_the_episode_class_under_the_head() -> None:
+    env = WormGoalEnv(terrain=TerrainClass.GRASS)
+    env.reset(seed=0)
+    assert env.surface_under_head == TerrainClass.GRASS and env.world is None
+
+
+def test_world_sampler_gives_a_new_world_each_reset_without_recompiling() -> None:
+    def sampler(rng: np.random.Generator) -> wd.World:
+        return hilly_world(int(rng.integers(1_000_000)))
+
+    env = WormGoalEnv(world=sampler)
+    compiled = env.model
+    env.reset(seed=0)
+    first_world, first = env.world, env.model.hfield_data.copy()
+    env.reset()
+    assert env.model is compiled
+    assert env.world is not first_world
+    assert not np.array_equal(env.model.hfield_data, first)
+    env.reset(seed=0)
+    assert np.array_equal(env.model.hfield_data, first)  # the same seed gives the same world
+
+
+def test_reset_world_option_replaces_the_world() -> None:
+    env = WormGoalEnv(world=wd.flat((4.0, 4.0)), randomizer=DomainRandomizer(0.0))
+    obs, _ = env.reset(seed=0, options={"world": split_world(), "start": (1.0, 0.0)})
+    assert obs_part(env, obs, "terrain").tolist() == [0, 0, 1]
+
+
+def test_per_episode_surface_table_is_sampled_per_class() -> None:
+    env = WormGoalEnv(world=split_world(), randomizer=DomainRandomizer(0.0))
+    env.reset(seed=0)
+    assert env.params.surfaces is not None
+    assert env.params.surfaces.props == tuple(terrain.nominal_surface(c) for c in TerrainClass)
+
+    env = WormGoalEnv(world=split_world())
+    env.reset(seed=0)
+    first = env.params.surfaces
+    env.reset(seed=1)
+    assert first is not None and env.params.surfaces is not None
+    assert first != env.params.surfaces
+    sand = [p.friction.mu_forward for p in (first.props[2], env.params.surfaces.props[2])]
+    assert all(0.4 <= mu <= 0.8 for mu in sand)
+
+
+def test_sand_under_the_worm_slows_it_in_a_world() -> None:
+    def travel(start_x: float) -> float:
+        env = WormGoalEnv(world=split_world(), randomizer=DomainRandomizer(0.0))
+        env.reset(seed=0, options={"start": (start_x, 0.0), "yaw": math.pi / 2, "target": (0, 9)})
+        start = env.head_xy
+        for _ in range(100):
+            env.step(GO)
+        return float(np.linalg.norm(env.head_xy - start))
+
+    assert travel(-1.0) > 1.2 * travel(1.0) > 0.05
+
+
+def test_leaving_the_world_truncates_the_episode() -> None:
+    env = WormGoalEnv(world=wd.flat((4.0, 4.0)), randomizer=DomainRandomizer(0.0))
+    env.reset(seed=0, options={"start": (1.6, 0.0), "yaw": 0.0, "target": (1.9, 0.0)})
+    flags = []
+    for _ in range(200):
+        _, _, terminated, truncated, info = env.step(GO)
+        flags.append((terminated, truncated, info["out_of_world"]))
+        if terminated or truncated:
+            break
+    assert flags[-1] == (False, True, True)
+    assert env.head_xy[0] > 1.7  # within 0.3 m of the edge at x = 2
+
+
+def test_world_env_renders_the_terrain(rendering: None) -> None:
+    env = WormGoalEnv(world=hilly_world(), render_mode="rgb_array")
+    env.reset(seed=0)
+    frame = env.render()
+    assert frame is not None and frame.std() > 0
+    env.close()
+
+
+def test_world_render_shows_class_colours(rendering: None) -> None:
+    base = wd.flat((4.0, 4.0))
+    surface = base.surface.copy()
+    surface[:, 41:] = TerrainClass.SAND  # +x
+    surface[41:, :41] = TerrainClass.GRASS  # -x, +y
+    world = wd.World(base.heights, surface, base.obstacle, base.cell)
+    env = WormGoalEnv(world=world, render_mode="rgb_array", randomizer=DomainRandomizer(0.0))
+    env.reset(seed=0)
+    env.set_overview((0.0, 0.0), 2.0)
+    frame = env.render()
+    env.close()
+    assert frame is not None
+
+    def colour(x: float, y: float) -> tuple[int, int, int]:
+        # The overview shows 2.4 m above and below the centre in 240 pixels. +y is up.
+        r, g, b = frame[round(240 - 100 * y), round(320 + 100 * x)].astype(int)
+        return int(r), int(g), int(b)
+
+    for x, y in [(1.0, 1.0), (1.0, -1.0)]:
+        r, g, b = colour(x, y)
+        assert r > b + 40 and r > g  # sand tan
+    r, g, b = colour(-1.0, 1.0)
+    assert g > r + 30 and g > b + 30  # grass green
+    r, g, b = colour(-1.0, -1.0)
+    assert abs(r - g) < 20 and abs(g - b) < 20  # stone grey
