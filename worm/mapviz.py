@@ -6,11 +6,16 @@ and pixel y grows downward, so world +y is at the top of the image.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from worm.terrain import TerrainClass
 from worm.world import World
+
+if TYPE_CHECKING:
+    from worm.planner import CostMap
 
 Image = NDArray[np.uint8]
 Color = tuple[int, int, int]
@@ -21,6 +26,10 @@ CLASS_COLORS: dict[TerrainClass, Color] = {
     TerrainClass.SAND: (214, 190, 140),  # sand tan
 }
 ROCK_COLOR: Color = (60, 56, 54)
+PATH_COLOR: Color = (30, 90, 255)
+WAYPOINT_COLOR: Color = (230, 40, 40)
+REACHED_COLOR: Color = (130, 130, 130)
+GOAL_COLOR: Color = (255, 220, 0)
 _LIGHT = np.array([-0.5, 0.5, 0.7]) / np.linalg.norm([-0.5, 0.5, 0.7])  # from the top left
 
 
@@ -99,3 +108,39 @@ def draw_polyline(
         steps = int(np.abs(end - start).max()) + 1
         for pixel in np.rint(np.linspace(start, end, steps)).astype(np.int_):
             _disc(image, pixel, 0.5 * width, rgb)
+
+
+def draw_blocked(image: Image, world: World, costmap: CostMap, px_per_m: float) -> None:
+    """Tint the pixels of blocked planning cells red, in place."""
+    height, width = image.shape[:2]
+    xmin, _, _, ymax = world.extent
+    xs = xmin + (np.arange(width) + 0.5) / px_per_m
+    ys = ymax - (np.arange(height) + 0.5) / px_per_m
+    rows, cols = costmap.shape
+    col = np.clip(
+        np.rint((xs - costmap.origin[0]) / costmap.resolution).astype(np.int_), 0, cols - 1
+    )
+    row = np.clip(
+        np.rint((ys - costmap.origin[1]) / costmap.resolution).astype(np.int_), 0, rows - 1
+    )
+    blocked = ~np.isfinite(costmap.cost[row[:, None], col[None, :]])
+    tinted = 0.6 * image[blocked] + 0.4 * np.array([200, 40, 40])
+    image[blocked] = tinted.astype(np.uint8)
+
+
+def draw_plan(
+    image: Image,
+    world: World,
+    path: ArrayLike,
+    waypoints: ArrayLike,
+    px_per_m: float,
+    reached: int = 0,
+) -> None:
+    """Draw a planned route in place: path, waypoints (grey once reached) and the goal."""
+    points = np.atleast_2d(waypoints)
+    draw_polyline(image, world, path, PATH_COLOR, px_per_m)
+    if reached:
+        draw_points(image, world, points[:reached], REACHED_COLOR, px_per_m)
+    if reached < len(points) - 1:
+        draw_points(image, world, points[reached:-1], WAYPOINT_COLOR, px_per_m)
+    draw_points(image, world, points[-1:], GOAL_COLOR, px_per_m, radius=5)
