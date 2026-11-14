@@ -13,6 +13,9 @@ CLOUD = ROOT / "scripts" / "cloud"
 TOKEN = "secret-token-do-not-print-123"
 CONFIG = "configs/terrain_v2_smoke.toml"
 
+# run_remote.sh copies `git archive HEAD`. The copy on the VM is not a git checkout.
+needs_git = pytest.mark.skipif(not (ROOT / ".git").exists(), reason="not a git checkout")
+
 FAKE = """#!/usr/bin/env bash
 echo "{name} $*" >> "$FAKE_LOG"
 {body}
@@ -108,6 +111,7 @@ def test_run_remote_dry_run_orders_create_launch_sync_verify_delete(tmp_path: Pa
     assert not (tmp_path / "calls.log").exists()  # a dry run calls nothing
 
 
+@needs_git
 def test_run_remote_creates_trains_verifies_and_deletes(tmp_path: Path) -> None:
     env = fakes(tmp_path)
     done = run_remote(env, tmp_path, "--poll-seconds", "0")
@@ -126,6 +130,7 @@ def test_run_remote_creates_trains_verifies_and_deletes(tmp_path: Path) -> None:
     assert (tmp_path / "results" / "terrain_v2_smoke_seed1" / "policy.zip").exists()
 
 
+@needs_git
 def test_run_remote_skips_delete_when_verify_fails(tmp_path: Path) -> None:
     env = fakes(tmp_path, rsync_body="")  # the sync brings nothing back
     done = run_remote(env, tmp_path, "--poll-seconds", "0")
@@ -136,6 +141,7 @@ def test_run_remote_skips_delete_when_verify_fails(tmp_path: Path) -> None:
     assert "NOT deleted" in done.stdout + done.stderr
 
 
+@needs_git
 def test_run_remote_keep_flag_skips_the_delete(tmp_path: Path) -> None:
     done = run_remote(fakes(tmp_path), tmp_path, "--poll-seconds", "0", "--keep")
     assert done.returncode == 0, done.stdout + done.stderr
@@ -171,6 +177,7 @@ def test_failsafe_builds_the_delete_request_from_metadata(tmp_path: Path) -> Non
     assert TOKEN not in calls + done.stdout + done.stderr  # the token goes through stdin
 
 
+@needs_git
 def test_no_token_appears_in_any_log_or_committed_file(tmp_path: Path) -> None:
     done = run_remote(fakes(tmp_path), tmp_path, "--poll-seconds", "0")
     assert done.returncode == 0, done.stdout + done.stderr
