@@ -15,7 +15,7 @@ from numpy.typing import NDArray
 from worm import friction, gait, model
 from worm.randomize import DomainRandomizer, PhysicsParams
 from worm.reward import StepState, reward
-from worm.sensors import SensorSuite, head_pose
+from worm.sensors import SensorSuite, head_pose, read_terrain
 from worm.servo import ServoModel
 from worm.spec import WormSpec, action_spec, obs_layout
 from worm.terrain import TerrainClass
@@ -44,6 +44,8 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
     With a `World`, or a `WorldSampler` that returns a new world per reset, the ground
     is a heightfield. Each segment then takes its surface from the cell under it, and
     the terrain one-hot is the class under the head.
+
+    `obs_version=2` appends the terrain class and the ground heights ahead of the head.
     """
 
     def __init__(
@@ -56,6 +58,7 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         target_range: tuple[float, float] = (1.0, 3.0),
         render_mode: str | None = None,
         world: World | WorldSampler | None = None,
+        obs_version: int = 1,
     ) -> None:
         self.spec_ = spec or WormSpec()
         self.metadata = {
@@ -63,7 +66,7 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
             "render_fps": round(1.0 / self.spec_.control_dt),
         }
         self.actions = action_spec(self.spec_)
-        self.layout = obs_layout(self.spec_)
+        self.layout = obs_layout(self.spec_, obs_version)
         self.randomizer = randomizer or DomainRandomizer()
         self.terrain = terrain
         self.max_steps = round(episode_seconds / self.spec_.control_dt)
@@ -336,6 +339,13 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         obs[slices["joint_delta"]] = self._joint_delta
         obs[slices["prev_action"]] = self._prev_action
         obs[slices["terrain"].start + int(self.surface_under_head)] = 1.0
+        if self.layout.version >= 2:
+            xy, yaw, _, _ = head_pose(self.data, self._head)
+            ahead = read_terrain(
+                self._world, xy, yaw, self.params.sensor, self.np_random, self.params.terrain
+            )
+            for name, value in ahead.items():
+                obs[slices[name]] = value
         return np.clip(obs, -10.0, 10.0)
 
     def _info(self, terms: dict[str, float], out_of_world: bool = False) -> dict[str, Any]:
