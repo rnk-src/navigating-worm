@@ -61,6 +61,7 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         self.model = model.build(self.spec_)
         self.data = mujoco.MjData(self.model)
         self._nominal_mass = self.model.body_mass.copy()
+        self._nominal_inertia = self.model.body_inertia.copy()
         self._head = self.model.body("seg0").id
         self._friction = friction.ResistiveForce(model.segment_body_ids(self.model, self.spec_))
         self._servo = ServoModel(self.spec_)
@@ -193,6 +194,8 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
     def _apply_params(self, params: PhysicsParams) -> None:
         m, spec = self.model, self.spec_
         m.body_mass[:] = self._nominal_mass * params.mass_scale
+        m.body_inertia[:] = self._nominal_inertia * params.mass_scale
+        mujoco.mj_setConst(m, self.data)
         torque = spec.servo_torque * params.servo.strength
         m.actuator_forcerange[:] = (-torque, torque)
         m.actuator_gainprm[:, 0] = spec.servo_kp * params.servo.strength
@@ -221,8 +224,7 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
             self._prev_joint_pos = joint_pos
         obs[slices["joint_delta"]] = self._joint_delta
         obs[slices["prev_action"]] = self._prev_action
-        terrain = self.terrain if self.terrain is not None else TerrainClass.CONCRETE
-        obs[slices["terrain"].start + int(terrain)] = 1.0
+        obs[slices["terrain"].start + int(self.params.terrain)] = 1.0
         return np.clip(obs, -10.0, 10.0)
 
     def _info(self, terms: dict[str, float]) -> dict[str, Any]:

@@ -11,7 +11,7 @@ def samples(level: float, cls: TerrainClass | None = None, n: int = 200) -> list
 
 
 def test_level_zero_always_returns_nominal_physics() -> None:
-    assert all(p == PhysicsParams() for p in samples(0.0, n=20))
+    assert all(p == PhysicsParams() for p in samples(0.0, TerrainClass.CONCRETE, n=20))
     assert PhysicsParams().friction.mu_lateral / PhysicsParams().friction.mu_forward == 4.0
 
 
@@ -55,3 +55,22 @@ def test_full_level_varies_servo_dynamics_and_mass_within_bounds() -> None:
         assert low <= min(values) < max(values) <= high, name
     masses = [p.mass_scale for p in drawn]
     assert 0.8 <= min(masses) < max(masses) <= 1.3
+
+
+def test_level_zero_keeps_the_requested_terrain_class_with_nominal_friction() -> None:
+    for p in samples(0.0, TerrainClass.SAND, n=5):
+        assert p == PhysicsParams(terrain=TerrainClass.SAND)
+
+
+def test_level_scales_class_friction_toward_nominal() -> None:
+    # Sand forward friction spans (0.4, 0.8). At half level it moves halfway to 0.3.
+    forward = [p.friction.mu_forward for p in samples(0.5, TerrainClass.SAND)]
+    assert 0.35 <= min(forward) and max(forward) <= 0.55
+
+
+def test_class_none_draws_every_terrain_class_and_reports_it() -> None:
+    assert {p.terrain for p in samples(1.0)} == set(TerrainClass)
+
+
+def test_requested_class_is_reported() -> None:
+    assert {p.terrain for p in samples(1.0, TerrainClass.GRASS, n=20)} == {TerrainClass.GRASS}
