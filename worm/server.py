@@ -20,6 +20,7 @@ STATIC_DIR = Path(__file__).parent / "static"
 SPEED_RANGE = (1.0, 20.0)  # sim seconds per wall second
 _MAX_BODY = 64 * 1024  # bytes
 _CALL_TIMEOUT = 30.0  # s
+_LOOPBACK = frozenset({"127.0.0.1", "::1"})
 
 
 class SimLoop(threading.Thread):
@@ -109,7 +110,10 @@ class SimLoop(threading.Thread):
                     steps = int(budget)
                     budget -= steps
                     if steps:
-                        self._session.tick(steps)
+                        try:
+                            self._session.tick(steps)
+                        except RuntimeError:  # the map went away; wait for a new one
+                            pass
                         stepped = True
                 self._publish(with_frame=stepped or item is not None or self._frame is None)
         finally:
@@ -124,9 +128,15 @@ def _need_object(body: Any) -> dict[str, Any]:
 
 def _finite(body: dict[str, Any], key: str) -> float:
     value = body.get(key)
-    if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value):
+    if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{key} must be a finite number")
-    return float(value)
+    try:
+        number = float(value)  # a huge int overflows here
+    except OverflowError as error:
+        raise ValueError(f"{key} must be a finite number") from error
+    if not math.isfinite(number):
+        raise ValueError(f"{key} must be a finite number")
+    return number
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -190,10 +200,23 @@ class _Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError as error:
             raise ValueError(f"bad JSON: {error}") from error
 
+    def _same_origin(self) -> bool:
+        """Refuse a page from another site, and a rebound host name, on a loopback server."""
+        host = self.headers.get("Host", "")
+        origin = self.headers.get("Origin")
+        if origin is not None and urlparse(origin).netloc != host:
+            return False
+        if self.server.server_address[0] in _LOOPBACK:
+            return (urlparse("//" + host).hostname or "") in _LOOPBACK | {"localhost"}
+        return True
+
     def do_POST(self) -> None:
         path = urlparse(self.path).path
         if path not in ("/api/map", "/api/goal", "/api/control"):
             self._error(404, "not found")
+            return
+        if not self._same_origin():
+            self._error(403, "cross-origin requests are not allowed")
             return
         loop, session = self.server.loop, self.server.session
         try:

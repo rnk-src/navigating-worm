@@ -33,9 +33,15 @@ _TRAIL_POINTS = 1500
 
 def _number(data: dict[str, Any], key: str, default: float) -> float:
     value = data.get(key, default)
-    if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value):
+    if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{key} must be a finite number")
-    return float(value)
+    try:
+        number = float(value)  # a huge int overflows here
+    except OverflowError as error:
+        raise ValueError(f"{key} must be a finite number") from error
+    if not math.isfinite(number):
+        raise ValueError(f"{key} must be a finite number")
+    return number
 
 
 def _integer(data: dict[str, Any], key: str, default: int) -> int:
@@ -188,15 +194,20 @@ class DemoSession:
 
     def new_map(self, req: MapRequest) -> None:
         """Generate a world and spawn the worm at its centre."""
-        self.close()
+        # Build everything first, so a failure leaves the current map untouched.
         world = generate(req.to_config(), req.seed)
         env = WormGoalEnv(
             world=world,
             episode_seconds=NavConfig().waypoint_timeout,
             render_mode="rgb_array" if self._render else None,
         )
-        env.reset(seed=req.seed, options={"start": (0.0, 0.0)})
-        costmap = planner.build_costmap(world)
+        try:
+            env.reset(seed=req.seed, options={"start": (0.0, 0.0)})
+            costmap = planner.build_costmap(world)
+        except Exception:
+            env.close()
+            raise
+        self.close()
         self._env, self._world, self._costmap = env, world, costmap
         self._nav = Navigator(env, self._controller.policy, costmap)
         self._goal = None
@@ -237,7 +248,6 @@ class DemoSession:
         """Return the state of the demo as plain JSON types."""
         env, nav, _, _ = self._parts()
         _, yaw, _, _ = head_pose(env.data, 1)
-        trail = nav.trail
         plan = nav.plan
         return {
             "map_id": self._map_id,
@@ -247,14 +257,14 @@ class DemoSession:
             "head": _points(env.head_xy)[0],
             "yaw": round(float(yaw), 3),
             "body": _points(env.data.xpos[1 : 1 + env.spec_.n_segments, :2]),
-            "trail": _points(trail[::_TRAIL_EVERY][-_TRAIL_POINTS:]),
+            "trail": _points(nav.sampled_trail(_TRAIL_EVERY, _TRAIL_POINTS)),
             "path": [] if plan is None else _points(plan.path),
             "waypoints": [] if plan is None else _points(plan.waypoints),
             "reached": nav.reached,
             "goal": self._goal,
             "replans": nav.replans,
             "surface": env.surface_under_head.name.lower(),
-            "sim_time": round(len(trail) * env.spec_.control_dt, 2),
+            "sim_time": round(nav.trail_length * env.spec_.control_dt, 2),
         }
 
     def map_info(self) -> dict[str, Any]:

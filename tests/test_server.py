@@ -177,3 +177,27 @@ def test_loop_speed_control_changes_steps_per_second(client: Client) -> None:
     assert fast > 3.0 * slow
     assert client.post("/api/control", {"speed": 500})[0] == 200
     assert client.state()["speed"] == 20.0  # clamped
+
+
+def test_a_huge_integer_goal_returns_400_not_500(client: Client) -> None:
+    status, answer = client.post("/api/goal", None, raw=b'{"x": 1' + b"0" * 400 + b', "y": 0}')
+    assert status == 400 and answer["ok"] is False
+
+
+def test_a_cross_origin_post_is_refused(client: Client) -> None:
+    def post(headers: dict[str, str]) -> int:
+        request = urllib.request.Request(
+            client.base + "/api/control",
+            data=b'{"pause": false}',
+            headers={"Content-Type": "application/json", **headers},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=10) as reply:
+                return int(reply.status)
+        except urllib.error.HTTPError as error:
+            return error.code
+
+    assert post({"Origin": "http://evil.example"}) == 403
+    assert post({"Host": "evil.example:8765"}) == 403  # DNS rebinding
+    assert post({"Origin": client.base}) == 200
+    assert post({}) == 200
