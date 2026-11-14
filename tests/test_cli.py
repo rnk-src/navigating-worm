@@ -162,3 +162,23 @@ def test_calibrate_costs_prints_a_speed_and_a_cost_per_class() -> None:
         assert re.search(rf"{name}: \d\.\d\d\d m/s", done.stdout)
     costs = re.search(r"surface_cost = \(1\.00, (\d\.\d\d), (\d\.\d\d)\)", done.stdout)
     assert costs and float(costs.group(1)) > 0.5 and float(costs.group(2)) > 0.5
+
+
+def test_scripts_build_the_env_for_the_obs_version_of_the_policy(tmp_path: Path) -> None:
+    config = str(ROOT / "configs" / "terrain_v2_smoke.toml")
+    policy = str(tmp_path / "v2")
+    trained = run(
+        "train.py", "--config", config, "--steps", "256", "--n-envs", "1", "--out", policy
+    )
+    assert trained.returncode == 0, trained.stderr
+    assert json.loads((tmp_path / "v2" / "meta.json").read_text())["obs_version"] == 2
+
+    routes = run(
+        "eval_route.py", "--policy", policy, "--runs", "1", "--length", "2", "--timeout", "2"
+    )
+    assert routes.returncode == 0, routes.stderr
+    world = ["--seed", "3", "--size", "4", "--rocks", "0", "--ditches", "0", "--max-slope", "5"]
+    driven = run("navigate.py", "--policy", policy, *world, "--goal", "0.8", "0.6")
+    assert driven.returncode in (0, 1), driven.stderr  # it drove; an untrained policy may fail
+    speeds = run("calibrate_costs.py", "--policy", policy, "--targets", "1", "--distance", "0.3")
+    assert speeds.returncode == 0, speeds.stderr

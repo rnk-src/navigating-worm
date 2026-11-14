@@ -12,10 +12,10 @@ from pathlib import Path
 import imageio.v2 as imageio
 import numpy as np
 
+from worm.cli import policy_from_arg
 from worm.env import WormGoalEnv
 from worm.randomize import DomainRandomizer
 from worm.route import run_route, showcase_waypoints
-from worm.training import load_policy
 from worm.video import FrameRecorder
 
 RED, GREY, BLUE = (0.9, 0.1, 0.1, 1.0), (0.6, 0.6, 0.6, 1.0), (0.1, 0.3, 0.9, 1.0)
@@ -32,8 +32,12 @@ if __name__ == "__main__":
     waypoints = showcase_waypoints()
     corners = np.vstack([[0.0, 0.0], waypoints])
     low, high = corners.min(axis=0), corners.max(axis=0)
+    policy, obs_version = policy_from_arg(str(args.policy))
     env = WormGoalEnv(
-        randomizer=DomainRandomizer(0.0), episode_seconds=args.timeout, render_mode="rgb_array"
+        randomizer=DomainRandomizer(0.0),
+        episode_seconds=args.timeout,
+        render_mode="rgb_array",
+        obs_version=obs_version,
     )
     middle = 0.5 * (low + high)
     center = (float(middle[0]), float(middle[1]))
@@ -66,7 +70,7 @@ if __name__ == "__main__":
         follow()
         recorder()
 
-    result = run_route(load_policy(args.policy), env, waypoints, seed=args.seed, on_step=record)
+    result = run_route(policy, env, waypoints, seed=args.seed, on_step=record)
     env.close()
     args.out.parent.mkdir(parents=True, exist_ok=True)
     imageio.mimsave(args.out, recorder.frames, fps=env.metadata["render_fps"])

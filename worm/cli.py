@@ -1,9 +1,12 @@
-"""Command-line arguments shared by the scripts that generate a world."""
+"""Command-line helpers shared by the scripts: world arguments and policy loading."""
 
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
+from worm.controllers import Policy, bearing_steer
+from worm.spec import WormSpec, obs_layout
 from worm.world import World, WorldConfig, generate
 
 
@@ -28,3 +31,16 @@ def world_from_args(args: argparse.Namespace) -> World:
         n_ditches=args.ditches,
     )
     return generate(cfg, args.seed)
+
+
+def policy_from_arg(name: str) -> tuple[Policy, int]:
+    """Return (policy, observation version) for a policy folder or "scripted".
+
+    Build the env with this observation version, or the policy gets the wrong input.
+    """
+    if name == "scripted":
+        return bearing_steer(obs_layout(WormSpec())), 1
+    from worm.training import load_policy  # imports torch; the scripted path does not need it
+
+    loaded = load_policy(Path(name))
+    return loaded, loaded.obs_version

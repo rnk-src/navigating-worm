@@ -8,9 +8,9 @@ from pathlib import Path
 
 import numpy as np
 
+from worm.cli import policy_from_arg
 from worm.env import WormGoalEnv
 from worm.route import make_waypoints, run_route, split_seed
-from worm.training import load_policy
 from worm.video import FrameRecorder
 
 if __name__ == "__main__":
@@ -26,12 +26,16 @@ if __name__ == "__main__":
     parser.add_argument("--json", type=Path, default=None, help="write the result table here")
     args = parser.parse_args()
 
-    policy = load_policy(args.policy)
+    policy, obs_version = policy_from_arg(str(args.policy))
     rows = []
     for run in range(args.runs):
         route_seed, env_seed = split_seed(args.seed + run)
         record = args.video is not None and run == 0
-        env = WormGoalEnv(episode_seconds=args.timeout, render_mode="rgb_array" if record else None)
+        env = WormGoalEnv(
+            episode_seconds=args.timeout,
+            render_mode="rgb_array" if record else None,
+            obs_version=obs_version,
+        )
         fps = env.metadata["render_fps"]
         recorder = FrameRecorder(env.render, max_frames=round(args.video_seconds * fps))
         waypoints = make_waypoints(args.length, args.spacing, np.random.default_rng(route_seed))
