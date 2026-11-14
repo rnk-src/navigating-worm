@@ -187,3 +187,15 @@ def test_no_token_appears_in_any_log_or_committed_file(tmp_path: Path) -> None:
         path = ROOT / name
         if path.suffix in {".sh", ".py", ".toml", ".md", ".yml"} and path.exists():
             assert not re.search(r"HCLOUD_TOKEN=[\"']?[A-Za-z0-9]{20,}", path.read_text()), name
+
+
+@needs_git
+def test_run_remote_can_attach_to_a_server_that_already_trains(tmp_path: Path) -> None:
+    done = run_remote(fakes(tmp_path), tmp_path, "--poll-seconds", "0", "--server", "worm-train-x")
+    assert done.returncode == 0, done.stdout + done.stderr
+    calls = (tmp_path / "calls.log").read_text()
+    for skipped in ("server create", "bootstrap.sh", "failsafe.sh", "launch.sh", "tar -x"):
+        assert skipped not in calls
+    order = positions(calls, "status.sh", "rsync", "hcloud server delete worm-train-x")
+    assert order == sorted(order)
+    assert "Server worm-train-x: deleted." in done.stdout

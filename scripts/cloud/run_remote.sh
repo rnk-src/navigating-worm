@@ -13,6 +13,7 @@
 # Options: --type ccx63  --location LOC  --image ubuntu-24.04  --max-hours 12
 #          --results DIR (default runs/cloud_<server name>)  --poll-seconds 300
 #          --dry-run (print every command, run nothing)  --keep (do not delete)
+#          --server NAME (attach to a server that already trains: wait, copy, verify, delete)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 
@@ -28,6 +29,7 @@ POLL=300
 RESULTS=""
 DRY=0
 KEEP=0
+SERVER=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --type) TYPE="$2"; shift 2 ;;
@@ -42,11 +44,12 @@ while [ $# -gt 0 ]; do
     --results) RESULTS="$2"; shift 2 ;;
     --dry-run) DRY=1; shift ;;
     --keep) KEEP=1; shift ;;
+    --server) SERVER="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
-[ -n "$SSH_KEY" ] || { echo "pass --ssh-key NAME (a key of the Hetzner project)" >&2; exit 2; }
+[ -n "$SSH_KEY" ] || [ -n "$SERVER" ] || { echo "pass --ssh-key NAME (a key of the Hetzner project)" >&2; exit 2; }
 [ -f "$CONFIG" ] || { echo "no config file $CONFIG" >&2; exit 2; }
 if [ "$DRY" = 0 ] && [ -z "${HCLOUD_TOKEN:-}" ]; then
   echo "set HCLOUD_TOKEN in the environment of this shell" >&2
@@ -58,7 +61,7 @@ if [ "$DRY" = 0 ]; then
   done
 fi
 
-NAME="worm-train-$(date -u +%Y%m%d-%H%M%S)"
+NAME="${SERVER:-worm-train-$(date -u +%Y%m%d-%H%M%S)}"
 RUN_NAME="$(sed -n 's/^name *= *"\(.*\)"/\1/p' "$CONFIG" | head -1)"
 RESULTS="${RESULTS:-runs/cloud_$NAME}"
 KNOWN_HOSTS="$(mktemp)"
@@ -90,41 +93,47 @@ remote() {
   [ "$DRY" = 1 ] || ssh "${SSH_OPTS[@]}" "root@$IP" "$1" < /dev/null
 }
 
-# 1. Create the server.
-create=(hcloud server create --name "$NAME" --type "$TYPE" --image "$IMAGE"
-  --ssh-key "$SSH_KEY" --label purpose=worm-train)
-[ -z "$LOCATION" ] || create+=(--location "$LOCATION")
-run "${create[@]}"
-[ "$DRY" = 1 ] || CREATED=1
-[ "$DRY" = 1 ] || IP="$(hcloud server ip "$NAME")"
+if [ -n "$SERVER" ]; then
+  echo "attach to server $NAME"
+  [ "$DRY" = 1 ] || CREATED=1
+  [ "$DRY" = 1 ] || IP="$(hcloud server ip "$NAME")"
+else
+  # 1. Create the server.
+  create=(hcloud server create --name "$NAME" --type "$TYPE" --image "$IMAGE"
+    --ssh-key "$SSH_KEY" --label purpose=worm-train)
+  [ -z "$LOCATION" ] || create+=(--location "$LOCATION")
+  run "${create[@]}"
+  [ "$DRY" = 1 ] || CREATED=1
+  [ "$DRY" = 1 ] || IP="$(hcloud server ip "$NAME")"
 
-# 2. Wait for SSH.
-echo "+ wait for ssh on root@$IP"
-if [ "$DRY" = 0 ]; then
-  for attempt in $(seq 1 60); do
-    ssh "${SSH_OPTS[@]}" "root@$IP" true < /dev/null 2> /dev/null && break
-    [ "$attempt" != 60 ] || { echo "no ssh after 60 tries" >&2; exit 1; }
-    sleep 5
-  done
+  # 2. Wait for SSH.
+  echo "+ wait for ssh on root@$IP"
+  if [ "$DRY" = 0 ]; then
+    for attempt in $(seq 1 60); do
+      ssh "${SSH_OPTS[@]}" "root@$IP" true < /dev/null 2> /dev/null && break
+      [ "$attempt" != 60 ] || { echo "no ssh after 60 tries" >&2; exit 1; }
+      sleep 5
+    done
+  fi
+
+  # 3. Copy the committed tree to the VM.
+  git diff --quiet HEAD 2> /dev/null || echo "note: uncommitted changes are not copied"
+  echo "+ git archive HEAD | ssh root@$IP 'mkdir -p worm && tar -x -C worm'"
+  [ "$DRY" = 1 ] || git archive HEAD | ssh "${SSH_OPTS[@]}" "root@$IP" 'mkdir -p worm && tar -x -C worm'
+
+  # 4. Install the failsafe first, so that a later failure cannot leave the VM for ever.
+  echo "+ ssh root@$IP 'umask 077; cat > /root/.hcloud_token'   (the token goes through stdin)"
+  if [ "$DRY" = 0 ]; then
+    printf '%s' "$HCLOUD_TOKEN" |
+      ssh "${SSH_OPTS[@]}" "root@$IP" 'umask 077; cat > /root/.hcloud_token'
+  fi
+  # The parentheses matter: without them a waiting shell keeps the ssh session open.
+  remote "cd worm && (nohup setsid bash scripts/cloud/failsafe.sh --max-hours $MAX_HOURS > /root/failsafe.log 2>&1 < /dev/null &)"
+
+  # 5. Prepare the machine, then start the training.
+  remote "cd worm && bash scripts/cloud/bootstrap.sh"
+  remote "$ON_VM && bash scripts/cloud/launch.sh --config $CONFIG --seeds $SEEDS --n-envs $N_ENVS --nohup --no-tensorboard"
 fi
-
-# 3. Copy the committed tree to the VM.
-git diff --quiet HEAD 2> /dev/null || echo "note: uncommitted changes are not copied"
-echo "+ git archive HEAD | ssh root@$IP 'mkdir -p worm && tar -x -C worm'"
-[ "$DRY" = 1 ] || git archive HEAD | ssh "${SSH_OPTS[@]}" "root@$IP" 'mkdir -p worm && tar -x -C worm'
-
-# 4. Install the failsafe first, so that a later failure cannot leave the VM for ever.
-echo "+ ssh root@$IP 'umask 077; cat > /root/.hcloud_token'   (the token goes through stdin)"
-if [ "$DRY" = 0 ]; then
-  printf '%s' "$HCLOUD_TOKEN" |
-    ssh "${SSH_OPTS[@]}" "root@$IP" 'umask 077; cat > /root/.hcloud_token'
-fi
-# The parentheses matter: without them a waiting shell keeps the ssh session open.
-remote "cd worm && (nohup setsid bash scripts/cloud/failsafe.sh --max-hours $MAX_HOURS > /root/failsafe.log 2>&1 < /dev/null &)"
-
-# 5. Prepare the machine, then start the training.
-remote "cd worm && bash scripts/cloud/bootstrap.sh"
-remote "$ON_VM && bash scripts/cloud/launch.sh --config $CONFIG --seeds $SEEDS --n-envs $N_ENVS --nohup --no-tensorboard"
 
 # 6. Wait until no run is going. status.sh exits with 3 while one is.
 echo "+ poll every $POLL s: ssh root@$IP 'bash scripts/cloud/status.sh --exit-code'"
