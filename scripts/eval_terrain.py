@@ -15,8 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from worm import evaluate as ev
-from worm.controllers import Policy, bearing_steer
-from worm.spec import WormSpec, obs_layout
+from worm.cli import policy_from_arg
 
 
 def report(name: str, summary: dict[str, Any]) -> None:
@@ -42,14 +41,7 @@ if __name__ == "__main__":
     parser.add_argument("--json", type=Path, default=None, help="write the result here")
     args = parser.parse_args()
 
-    policy: Policy
-    if args.policy == "scripted":
-        policy, obs_version = bearing_steer(obs_layout(WormSpec())), 1
-    else:
-        from worm.training import load_policy  # imports torch
-
-        loaded = load_policy(Path(args.policy))
-        policy, obs_version = loaded, loaded.obs_version
+    policy, obs_version = policy_from_arg(args.policy)
     levels = tuple(int(level) for level in args.levels.split(","))
     result = ev.evaluate_terrain(policy, obs_version, args.maps, args.size, levels, args.seed)
     result = {"policy": Path(args.policy).name, "obs_version": obs_version, **result}
