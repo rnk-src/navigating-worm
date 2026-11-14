@@ -6,6 +6,7 @@ import enum
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 
 @dataclass(frozen=True)
@@ -39,9 +40,62 @@ def params(cls: TerrainClass, rng: np.random.Generator) -> FrictionParams:
     return FrictionParams(mu_forward, mu_forward * float(rng.uniform(*ratio_range)))
 
 
-# Per class: amplitude of the fine surface relief, in metres. Sand is smooth.
-ROUGHNESS: dict[TerrainClass, float] = {
-    TerrainClass.CONCRETE: 0.004,
-    TerrainClass.GRASS: 0.002,
-    TerrainClass.SAND: 0.0,
+@dataclass(frozen=True)
+class SurfaceProps:
+    """Everything the physics needs to know about one surface class in one episode."""
+
+    friction: FrictionParams
+    viscous: float  # N s / m per segment, speed-proportional drag
+    solref_timeconst: float  # s, contact softness; a larger value lets the segment sink
+    roughness: float  # m, amplitude of the fine relief that the generator adds
+
+
+@dataclass(frozen=True)
+class SurfaceTable:
+    """The surface properties of one episode, indexed by `TerrainClass`."""
+
+    props: tuple[SurfaceProps, SurfaceProps, SurfaceProps]
+
+    def arrays(self) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+        """Return (mu [forward, lateral] (3, 2), viscous (3,), solref timeconst (3,))."""
+        mu = np.array([[p.friction.mu_forward, p.friction.mu_lateral] for p in self.props])
+        viscous = np.array([p.viscous for p in self.props])
+        timeconst = np.array([p.solref_timeconst for p in self.props])
+        return mu, viscous, timeconst
+
+
+# Per class: (viscous range, solref timeconst range, roughness range).
+_Range = tuple[float, float]
+_SURFACE_RANGES: dict[TerrainClass, tuple[_Range, _Range, _Range]] = {
+    TerrainClass.CONCRETE: ((0.0, 0.02), (0.005, 0.005), (0.002, 0.006)),
+    TerrainClass.GRASS: ((0.05, 0.15), (0.01, 0.01), (0.001, 0.003)),
+    TerrainClass.SAND: ((0.15, 0.4), (0.02, 0.04), (0.0, 0.0)),
 }
+
+
+def surface_props(cls: TerrainClass, rng: np.random.Generator) -> SurfaceProps:
+    """Sample the surface properties of one class for one episode."""
+    viscous, timeconst, roughness = _SURFACE_RANGES[cls]
+    return SurfaceProps(
+        friction=params(cls, rng),
+        viscous=float(rng.uniform(*viscous)),
+        solref_timeconst=float(rng.uniform(*timeconst)),
+        roughness=float(rng.uniform(*roughness)),
+    )
+
+
+def nominal_surface(cls: TerrainClass) -> SurfaceProps:
+    """Return the midpoint of every range of the class."""
+    (f_low, f_high), (r_low, r_high) = _RANGES[cls]
+    mu_forward = 0.5 * (f_low + f_high)
+    viscous, timeconst, roughness = _SURFACE_RANGES[cls]
+    return SurfaceProps(
+        friction=FrictionParams(mu_forward, mu_forward * 0.5 * (r_low + r_high)),
+        viscous=0.5 * sum(viscous),
+        solref_timeconst=0.5 * sum(timeconst),
+        roughness=0.5 * sum(roughness),
+    )
+
+
+# Per class: nominal amplitude of the fine surface relief, in metres. Sand is smooth.
+ROUGHNESS: dict[TerrainClass, float] = {cls: nominal_surface(cls).roughness for cls in TerrainClass}
