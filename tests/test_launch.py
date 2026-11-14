@@ -129,3 +129,16 @@ def test_status_script_reports_no_runs_in_an_empty_folder(tmp_path: Path) -> Non
     )
     assert done.returncode == 0, done.stderr
     assert "no runs" in done.stdout
+
+
+def test_status_exit_code_tells_whether_a_run_is_still_going(tmp_path: Path) -> None:
+    assert ln.main(["status", "--runs", str(tmp_path), "--exit-code"]) == 0
+    record = ln.launch(SMOKE, [0], 1, steps=2_000_000, runs=tmp_path, tensorboard=False)
+    pid = json.loads(record.read_text())["runs"][0]["pid"]
+    try:
+        assert ln.main(["status", "--runs", str(tmp_path), "--exit-code"]) == ln.RUNNING
+        assert ln.main(["status", "--runs", str(tmp_path)]) == 0
+    finally:
+        os.kill(pid, 9)
+    wait_for_exit([pid], 30.0)
+    assert ln.main(["status", "--runs", str(tmp_path), "--exit-code"]) == 0
