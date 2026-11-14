@@ -42,7 +42,6 @@ if __name__ == "__main__":
         f"{c.name.lower()} {100 * s:.0f} %" for c, s in zip(TerrainClass, shares, strict=True)
     )
     print(f"seed {args.seed}: {args.size:g} m world, {len(world.rocks)} rocks, {mix}")
-    print(
-        f"height range {world.heights.max():.2f} m, steepest slope {world.slope_deg().max():.0f} deg"
-    )
+    steepest = world.slope_deg().max()
+    print(f"height range {world.heights.max():.2f} m, steepest slope {steepest:.0f} deg")
     print(f"wrote {args.out}")
