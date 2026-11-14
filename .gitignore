@@ -11,3 +11,6 @@ checkpoints/
 .DS_Store
 runs/
 *.log
+
+# Local planning notes
+docs/

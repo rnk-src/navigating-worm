@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navigating Worm</title>
+<style>
+  :root { --bg:#f4f4f2; --fg:#1d1d1f; --panel:#fff; --line:#d0d0cc; --accent:#1e5aff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1b1b1d; --fg:#ececec; --panel:#26262a; --line:#3a3a40; --accent:#6c93ff; }
+  }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, sans-serif; }
+  main { display:flex; flex-wrap:wrap; gap:16px; padding:16px; }
+  #stage { position:relative; }
+  canvas { display:block; max-width:100%; border:1px solid var(--line); cursor:crosshair; }
+  aside { background:var(--panel); border:1px solid var(--line); border-radius:8px;
+          padding:12px 16px; width:260px; }
+  h1 { font-size:16px; margin:0 0 8px; }
+  label { display:block; margin:8px 0 2px; }
+  input[type=number], select { width:100%; box-sizing:border-box; }
+  input[type=range] { width:100%; }
+  button { margin:8px 8px 0 0; padding:6px 12px; cursor:pointer; }
+  #status { margin-top:12px; font-family:ui-monospace, monospace; font-size:12px; white-space:pre-wrap; }
+  #message { color:#d33; min-height:1.4em; }
+  #frame { width:100%; margin-top:8px; display:none; border-radius:4px; }
+</style>
+</head>
+<body>
+<main>
+  <div id="stage"><canvas id="map" width="600" height="600"></canvas></div>
+  <aside>
+    <h1>Click the map to send the worm</h1>
+    <div id="message"></div>
+    <label>Seed <input id="seed" type="number" value="0" min="0"></label>
+    <label>Size
+      <select id="size"><option>5</option><option selected>10</option><option>15</option></select>
+    </label>
+    <label>Stone / concrete <input id="mix-c" type="range" min="0" max="1" step="0.05" value="0.4"></label>
+    <label>Grass <input id="mix-g" type="range" min="0" max="1" step="0.05" value="0.3"></label>
+    <label>Sand <input id="mix-s" type="range" min="0" max="1" step="0.05" value="0.3"></label>
+    <label>Max slope (deg) <input id="slope" type="range" min="0" max="18" step="1" value="12"></label>
+    <label>Rocks <input id="rocks" type="range" min="0" max="30" step="1" value="12"></label>
+    <label>Ditches <input id="ditches" type="range" min="0" max="6" step="1" value="2"></label>
+    <button id="new-map">New map</button>
+    <button id="pause">Pause</button>
+    <label>Speed <input id="speed" type="range" min="1" max="20" step="1" value="4"></label>
+    <div id="status">loading...</div>
+    <img id="frame" alt="follow camera">
+  </aside>
+</main>
+<script>
+"use strict";
+// Pixel convention, shared with worm/mapviz.py: pixel x grows with world +x and
+// pixel y grows downward, so world +y is at the top of the image.
+let info = null;      // /api/map.json
+let mapImage = null;  // /api/map.png
+let paused = false;
+let rejected = null;  // {x, y} of the last goal the planner refused
+let lastMapId = -1;
+const canvas = document.getElementById("map");
+const ctx = canvas.getContext("2d");
+const $ = (id) => document.getElementById(id);
+
+function worldToPixel(x, y) {
+  return [(x - info.extent[0]) * info.px_per_m, (info.extent[3] - y) * info.px_per_m];
+}
+function pixelToWorld(px, py) {
+  return [px / info.px_per_m + info.extent[0], info.extent[3] - py / info.px_per_m];
+}
+
+async function post(path, body) {
+  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"},
+                               body: JSON.stringify(body)});
+  return r.json();
+}
+
+async function loadMap() {
+  info = await (await fetch("/api/map.json")).json();
+  canvas.width = info.width;
+  canvas.height = info.height;
+  mapImage = new Image();
+  mapImage.onload = draw;
+  mapImage.src = "/api/map.png?id=" + info.map_id;
+  lastMapId = info.map_id;
+  rejected = null;
+}
+
+function polyline(points, colour, width) {
+  if (points.length < 2) return;
+  ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.beginPath();
+  points.forEach((p, i) => {
+    const [x, y] = worldToPixel(p[0], p[1]);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+function dot(p, radius, colour) {
+  const [x, y] = worldToPixel(p[0], p[1]);
+  ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(x, y, radius, 0, 2 * Math.PI); ctx.fill();
+}
+
+let state = null;
+function draw() {
+  if (!info || !mapImage || !mapImage.complete) return;
+  ctx.drawImage(mapImage, 0, 0);
+  if (state) {
+    polyline(state.trail || [], "rgba(255,255,255,0.8)", 2);
+    polyline(state.path || [], "#1e5aff", 2);
+    (state.waypoints || []).forEach((w, i) => dot(w, 4, i < state.reached ? "#828282" : "#e62828"));
+    if (state.goal) dot(state.goal, 6, "#ffdc00");
+    polyline(state.body || [], "#111", 4);
+    if (state.head) {
+      const [x, y] = worldToPixel(state.head[0], state.head[1]);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(-state.yaw); // world yaw is counterclockwise
+      ctx.fillStyle = "#ff7a00"; ctx.beginPath();
+      ctx.moveTo(10, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  }
+  if (rejected) {
+    const [x, y] = worldToPixel(rejected[0], rejected[1]);
+    ctx.strokeStyle = "#e00"; ctx.lineWidth = 3; ctx.beginPath();
+    ctx.moveTo(x - 8, y - 8); ctx.lineTo(x + 8, y + 8);
+    ctx.moveTo(x + 8, y - 8); ctx.lineTo(x - 8, y + 8); ctx.stroke();
+  }
+}
+
+canvas.addEventListener("click", async (event) => {
+  if (!info) return;
+  const rect = canvas.getBoundingClientRect();
+  const px = (event.clientX - rect.left) * canvas.width / rect.width;
+  const py = (event.clientY - rect.top) * canvas.height / rect.height;
+  const [x, y] = pixelToWorld(px, py);
+  const result = await post("/api/goal", {x, y});
+  if (result.ok) { rejected = null; $("message").textContent = ""; }
+  else {
+    rejected = [x, y];
+    $("message").textContent = result.reason ? result.reason + ": " + (result.detail || "")
+                                              : (result.error || "goal refused");
+  }
+  draw();
+});
+
+$("new-map").addEventListener("click", async () => {
+  const result = await post("/api/map", {
+    seed: Number($("seed").value), size: Number($("size").value),
+    mix: [Number($("mix-c").value), Number($("mix-g").value), Number($("mix-s").value)],
+    max_slope_deg: Number($("slope").value), n_rocks: Number($("rocks").value),
+    n_ditches: Number($("ditches").value),
+  });
+  $("message").textContent = result.ok ? "" : (result.error || "map refused");
+  await loadMap();
+});
+$("pause").addEventListener("click", async () => {
+  paused = !paused;
+  await post("/api/control", {pause: paused});
+  $("pause").textContent = paused ? "Resume" : "Pause";
+});
+$("speed").addEventListener("input", () => post("/api/control", {speed: Number($("speed").value)}));
+
+let frameBusy = false;
+async function poll() {
+  try {
+    state = await (await fetch("/api/state")).json();
+    if (state.map_id !== undefined && state.map_id !== lastMapId) await loadMap();
+    $("status").textContent =
+      "policy: " + state.policy + "\nstatus: " + state.status +
+      (state.failure ? " (" + state.failure + ")" : "") +
+      "\nreplans: " + state.replans + "\nsurface: " + state.surface +
+      "\nsim time: " + state.sim_time + " s\nspeed: x" + state.speed;
+    draw();
+    if (!frameBusy) {
+      frameBusy = true;
+      const img = $("frame");
+      img.onload = () => { img.style.display = "block"; frameBusy = false; };
+      img.onerror = () => { img.style.display = "none"; frameBusy = false; };
+      img.src = "/api/frame.jpg?t=" + Date.now();
+    }
+  } catch (e) { $("status").textContent = "no connection to the server"; }
+  setTimeout(poll, 100);
+}
+poll();
+</script>
+</body>
+</html>

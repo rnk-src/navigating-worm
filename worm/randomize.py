@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
 from worm import terrain
 from worm.sensors import SensorParams
 from worm.servo import ServoParams
-from worm.terrain import FrictionParams, TerrainClass
+from worm.terrain import FrictionParams, SurfaceProps, SurfaceTable, TerrainClass
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,7 @@ class PhysicsParams:
     sensor: SensorParams = SensorParams()
     mass_scale: float = 1.0
     terrain: TerrainClass = TerrainClass.CONCRETE
+    surfaces: SurfaceTable | None = None  # per-class surfaces, set only in a world
 
 
 _NOMINAL_RATIO = terrain.NOMINAL.mu_lateral / terrain.NOMINAL.mu_forward
@@ -55,3 +56,31 @@ class DomainRandomizer:
         )
         mass = self._span(rng, 1.0, 0.8, 1.3)
         return PhysicsParams(fric, servo, SensorParams(), mass, cls)
+
+    def sample_surfaces(self, rng: np.random.Generator) -> SurfaceTable:
+        """Sample the surface of every terrain class for one episode in a world.
+
+        Level 0 returns the nominal surface of each class. This is a separate draw
+        from `sample`, so the flat-plane random stream is unchanged.
+        """
+        props: list[SurfaceProps] = []
+        for cls in TerrainClass:
+            nominal = terrain.nominal_surface(cls)
+            if self.level == 0.0:
+                props.append(nominal)
+                continue
+            raw = terrain.surface_props(cls, rng)
+            mu_forward = self._shrink(nominal.friction.mu_forward, raw.friction.mu_forward)
+            ratio = self._shrink(
+                nominal.friction.mu_lateral / nominal.friction.mu_forward,
+                raw.friction.mu_lateral / raw.friction.mu_forward,
+            )
+            props.append(
+                replace(
+                    raw,
+                    friction=FrictionParams(mu_forward, mu_forward * ratio),
+                    viscous=self._shrink(nominal.viscous, raw.viscous),
+                    solref_timeconst=self._shrink(nominal.solref_timeconst, raw.solref_timeconst),
+                )
+            )
+        return SurfaceTable((props[0], props[1], props[2]))
