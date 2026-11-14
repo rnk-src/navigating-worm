@@ -176,3 +176,13 @@ def test_old_train_signature_still_works(tmp_path: Path) -> None:
     run = train(256, 1, 0, tmp_path)
     assert (run / "policy.zip").exists() and (run / "vecnormalize.pkl").exists()
     assert json.loads((run / "meta.json").read_text())["obs_version"] == 1
+
+
+def test_nav_eval_runs_during_training_and_lands_in_progress(tmp_path: Path) -> None:
+    cfg = smoke(steps=512, every=256)
+    cfg = replace(cfg, eval=replace(cfg.eval, every_steps=256, maps=1, map_size=4.0))
+    train(cfg, tmp_path)
+    nav = progress(tmp_path)["eval"]
+    assert nav["steps"] == 512 and nav["level"] >= 1
+    assert 0.0 <= nav["nav_success"] <= 1.0
+    assert set(nav["speed"]) == {"concrete", "grass", "sand"}
