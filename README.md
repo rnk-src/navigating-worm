@@ -97,6 +97,15 @@ uv run tensorboard --logdir runs
 uv run python scripts/eval_terrain.py --policy runs/terrain_v2_seed0 --maps 50 --flat-routes 50 --json eval.json
 ```
 
+To train on a rented Hetzner Cloud VM instead, one command creates the server, trains every seed, copies the results back, verifies them and deletes the server. It needs the `hcloud` CLI and an SSH key in the Hetzner project. Try it with `--dry-run` first: that prints every command and runs nothing.
+
+```
+export HCLOUD_TOKEN=...        # in the shell only, never in a file
+scripts/cloud/run_remote.sh --ssh-key NAME --config configs/terrain_v2.toml --seeds 0,1,2 --n-envs 15
+```
+
+Billing stops only when the server is deleted. The script deletes it only after the results are complete on your machine, and says so when it does not. A failsafe on the VM deletes the server after `--max-hours` (default 12) in every case. Check the Hetzner console afterwards.
+
 A run writes checkpoints every 1M steps and keeps the newest three. SIGTERM saves a checkpoint, and `--resume` continues the step count. On a 12-core laptop CPU with 8 envs the run makes about 2,600 steps per second, so 20M steps take a little over two hours.
 
 `eval_terrain.py` drives one planned route of at least 5 m on each of 50 generated 10 m worlds per level. Level 1 is level ground with mixed surfaces. Level 2 adds hills up to 10 degrees and roughness. Level 3 is the full terrain: hills up to 18 degrees, rocks and ditches.

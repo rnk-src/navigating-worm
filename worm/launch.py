@@ -19,6 +19,7 @@ from worm.training import PROGRESS_FILE, load_config, read_progress
 ROOT = Path(__file__).parent.parent  # the commands run from here
 TRAIN_SCRIPT = "scripts/train.py"
 TENSORBOARD_PORT = 6006
+RUNNING = 3  # exit code of `status --exit-code` while a run is still going
 
 
 @dataclass(frozen=True)
@@ -186,6 +187,11 @@ def status(runs: Path = Path("runs"), tail: int = 0) -> str:
     return "\n".join(lines) if lines else f"no runs in {runs}"
 
 
+def any_running(runs: Path = Path("runs")) -> bool:
+    """Return True while a run of the launch records is still going."""
+    return any(is_training(int(run["pid"])) for rec in _records(runs) for run in rec["runs"])
+
+
 def stop(runs: Path = Path("runs")) -> list[int]:
     """Send SIGTERM to every live run of the launch records. Each saves a checkpoint.
 
@@ -219,6 +225,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     start.add_argument("--no-tensorboard", action="store_true")
     watch = commands.add_parser("status", help="print the progress of every run")
     watch.add_argument("--tail", type=int, default=3, help="log lines to print per run")
+    watch.add_argument(
+        "--exit-code", action="store_true", help=f"exit with {RUNNING} while a run is still going"
+    )
     end = commands.add_parser("stop", help="checkpoint and end every run")
     for command in (start, watch, end):
         command.add_argument("--runs", type=Path, default=Path("runs"))
@@ -242,6 +251,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"started seeds {args.seeds}. Record: {record.name}. Watch: scripts/cloud/status.sh")
     elif args.action == "status":
         print(status(args.runs, args.tail))
+        if args.exit_code and any_running(args.runs):
+            return RUNNING
     else:
         print(f"sent SIGTERM to {len(stop(args.runs))} runs")
     return 0
