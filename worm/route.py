@@ -9,10 +9,11 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+from worm.controllers import Policy
 from worm.env import WormGoalEnv
+from worm.navigate import RouteFollower
 
 Array = NDArray[np.float64]
-Policy = Callable[[NDArray[np.float32]], NDArray[np.float32]]
 
 
 @dataclass(frozen=True)
@@ -74,22 +75,15 @@ def run_route(
 
     The per-waypoint timeout is the env's episode length. The tolerance is the env's.
     """
-    if len(waypoints) == 0:
-        raise ValueError("the route has no waypoints")
-    obs, _ = env.reset(seed=seed, options={"target": waypoints[0]})
+    follower = RouteFollower(waypoints, pass_tolerance=None)
+    obs, _ = env.reset(seed=seed, options={"target": follower.waypoints[0]})
+    follower.start(env, obs)
     trajectory = []
-    reached = 0
-    while reached < len(waypoints):
-        obs, _, terminated, truncated, info = env.step(policy(obs))
-        trajectory.append(info["head_xy"])
+    while not follower.done:
+        trajectory.append(follower.step(env, policy).head_xy)
         if on_step is not None:
             on_step()
-        if info["reached"]:
-            reached += 1
-            if reached < len(waypoints):
-                obs = env.set_target(waypoints[reached])
-        elif terminated or truncated:
-            break
+    reached = follower.reached
     return RouteResult(
         success=reached == len(waypoints),
         reached=reached,

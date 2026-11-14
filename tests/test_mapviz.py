@@ -64,3 +64,20 @@ def test_draw_points_draws_a_disc_at_each_point() -> None:
     mapviz.draw_points(image, world, [(0.5, 0.25)], (0, 0, 255), 40.0, radius=3)
     blue = np.all(image == (0, 0, 255), axis=-1)
     assert 20 <= blue.sum() <= 40 and blue[10, 60]
+
+
+def test_draw_blocked_tints_only_the_blocked_cells() -> None:
+    from worm import planner
+
+    base = wd.flat((2.0, 2.0))
+    obstacle = base.obstacle.copy()
+    obstacle[18:23, 28:33] = True  # around (0.5, 0.0)
+    world = wd.World(base.heights, base.surface, obstacle, base.cell)
+    costmap = planner.build_costmap(world, planner.CostConfig(edge_margin=0.0))
+    image = mapviz.world_image(world, shade=False)
+    before = image.copy()
+    mapviz.draw_blocked(image, world, costmap, 40.0)
+    changed = np.any(image != before, axis=-1)
+    ring = mapviz.world_to_pixel(world, (0.5, 0.2), 40.0)  # inside the inflation ring
+    away = mapviz.world_to_pixel(world, (-0.5, 0.0), 40.0)
+    assert changed[ring[1], ring[0]] and not changed[away[1], away[0]]

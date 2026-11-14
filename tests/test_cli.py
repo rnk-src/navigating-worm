@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).parent.parent
 
 
@@ -97,3 +99,66 @@ def test_make_world_writes_a_map_png(tmp_path: Path) -> None:
     image = imageio.imread(out)
     assert image.shape == (160, 160, 3)  # 4 m at 40 pixels per metre
     assert "seed 3" in made.stdout and "concrete 100 %" in made.stdout
+
+
+def test_plan_map_writes_a_plan_png_or_reports_why_not(tmp_path: Path) -> None:
+    out = tmp_path / "plan.png"
+    world = ["--seed", "3", "--size", "6", "--rocks", "6"]
+    made = run("plan_map.py", *world, "--start", "0", "0", "--goal", "2", "1.5", "--out", str(out))
+    assert made.returncode == 0, made.stderr
+    import imageio.v2 as imageio
+
+    image = imageio.imread(out)
+    assert image.shape == (240, 240, 3)
+    blue = (image[..., 2].astype(int) - image[..., 0].astype(int) > 120).sum()
+    assert blue > 100  # the path is drawn
+    assert "waypoints" in made.stdout
+
+    outside = run("plan_map.py", *world, "--start", "0", "0", "--goal", "9", "9")
+    assert outside.returncode == 2
+    assert "infeasible: OUT_OF_BOUNDS" in outside.stdout
+
+
+def test_navigate_drives_a_planned_route_with_the_scripted_controller(tmp_path: Path) -> None:
+    report = tmp_path / "nav.json"
+    world = ["--seed", "3", "--size", "4", "--rocks", "0", "--ditches", "0", "--max-slope", "5"]
+    done = run(
+        "navigate.py", "--policy", "scripted", *world, "--goal", "0.8", "0.6", "--json", str(report)
+    )
+    assert done.returncode == 0, done.stdout + done.stderr
+    data = json.loads(report.read_text())
+    assert data["success"] and data["reason"] == "reached" and data["policy"] == "scripted"
+    assert set(data["class_seconds"]) == {"concrete", "grass", "sand"}
+    assert sum(data["class_seconds"].values()) == pytest.approx(data["sim_seconds"], abs=0.05)
+    assert data["sim_seconds"] > 3.0
+    assert "reached" in done.stdout
+
+    outside = run("navigate.py", "--policy", "scripted", *world, "--goal", "9", "9")
+    assert outside.returncode == 2 and "infeasible: OUT_OF_BOUNDS" in outside.stdout
+
+
+def test_navigate_can_record_a_video_with_the_map_beside_the_follow_camera(
+    tmp_path: Path, rendering: None
+) -> None:
+    video = tmp_path / "nav.mp4"
+    world = ["--seed", "3", "--size", "4", "--rocks", "0", "--ditches", "0", "--max-slope", "5"]
+    done = run(
+        "navigate.py", "--policy", "scripted", *world, "--goal", "0.5", "0.3",
+        "--video", str(video), "--speed", "4",
+    )  # fmt: skip
+    assert done.returncode == 0, done.stdout + done.stderr
+    import imageio.v2 as imageio
+
+    frames = imageio.mimread(video)
+    assert len(frames) >= 5 and frames[0].shape == (480, 1120, 3)  # 640 camera + 480 map
+
+
+def test_calibrate_costs_prints_a_speed_and_a_cost_per_class() -> None:
+    import re
+
+    done = run("calibrate_costs.py", "--policy", "scripted", "--targets", "1", "--distance", "0.5")
+    assert done.returncode == 0, done.stderr
+    for name in ("concrete", "grass", "sand"):
+        assert re.search(rf"{name}: \d\.\d\d\d m/s", done.stdout)
+    costs = re.search(r"surface_cost = \(1\.00, (\d\.\d\d), (\d\.\d\d)\)", done.stdout)
+    assert costs and float(costs.group(1)) > 0.5 and float(costs.group(2)) > 0.5
