@@ -302,3 +302,26 @@ def test_mass_scale_also_scales_inertia() -> None:
     scale = env.params.mass_scale
     assert scale != 1.0
     assert env.model.body_inertia[1:] == pytest.approx(nominal[1:] * scale)
+
+
+# Recorded on the flat-plane env before the terrain refactor. Each row holds the first
+# observation's sensor block (yaw rate, roll, pitch, bearing sin and cos, distance),
+# the terrain class, and the head position after 40 GO steps.
+_GOLDEN = [
+    ([-0.00369, -0.012459, -0.007323, 0.387525, 0.921859, 0.901773], 2, [-0.007708, 0.007095]),
+    ([0.000807, -0.004821, 0.005988, -0.068435, -0.997656, 0.55023], 1, [-0.041699, -0.014192]),
+    ([-0.002044, 0.00455, -0.000992, 0.019046, -0.999819, 0.615682], 2, [0.022056, 0.086243]),
+]
+
+
+@pytest.mark.parametrize("seed", [0, 1, 2])
+def test_flat_env_matches_the_m1_golden_trajectory(seed: int) -> None:
+    sensors, terrain_class, head = _GOLDEN[seed]
+    env = WormGoalEnv()
+    obs, _ = env.reset(seed=seed)
+    assert obs[:8] == pytest.approx(np.zeros(8), abs=1e-6)
+    assert obs[8:14] == pytest.approx(sensors, abs=2e-6)
+    assert int(np.argmax(obs[21:24])) == terrain_class
+    for _ in range(40):
+        _, _, _, _, info = env.step(GO)
+    assert info["head_xy"] == pytest.approx(head, abs=2e-6)
