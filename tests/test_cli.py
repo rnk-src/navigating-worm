@@ -84,3 +84,16 @@ def test_showcase_writes_a_sped_up_overview_video(tmp_path: Path, rendering: Non
     assert "reached 0/9" in made.stdout  # an untrained policy reaches nothing in 2 s
     red = frames[0][..., 0].astype(int) - frames[0][..., 1].astype(int) > 80
     assert red.sum() > 200  # the waypoint markers are in the picture
+
+
+def test_make_world_writes_a_map_png(tmp_path: Path) -> None:
+    out = tmp_path / "map.png"
+    made = run(
+        "make_world.py", "--seed", "3", "--size", "4", "--mix", "1", "0", "0", "--out", str(out)
+    )
+    assert made.returncode == 0, made.stderr
+    import imageio.v2 as imageio
+
+    image = imageio.imread(out)
+    assert image.shape == (160, 160, 3)  # 4 m at 40 pixels per metre
+    assert "seed 3" in made.stdout and "concrete 100 %" in made.stdout
