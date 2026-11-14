@@ -119,7 +119,8 @@ if [ "$DRY" = 0 ]; then
   printf '%s' "$HCLOUD_TOKEN" |
     ssh "${SSH_OPTS[@]}" "root@$IP" 'umask 077; cat > /root/.hcloud_token'
 fi
-remote "cd worm && nohup setsid bash scripts/cloud/failsafe.sh --max-hours $MAX_HOURS > /root/failsafe.log 2>&1 < /dev/null &"
+# The parentheses matter: without them a waiting shell keeps the ssh session open.
+remote "cd worm && (nohup setsid bash scripts/cloud/failsafe.sh --max-hours $MAX_HOURS > /root/failsafe.log 2>&1 < /dev/null &)"
 
 # 5. Prepare the machine, then start the training.
 remote "cd worm && bash scripts/cloud/bootstrap.sh"
