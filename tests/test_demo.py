@@ -1,6 +1,7 @@
 """The click-to-go session: map requests, controller loading and the headless session."""
 
 import json
+import math
 from pathlib import Path
 
 import pytest
@@ -71,3 +72,131 @@ def test_load_controller_reads_obs_version_from_meta_and_defaults_to_1(tmp_path:
     assert demo.read_obs_version(tmp_path) == 1
     (tmp_path / "meta.json").write_text(json.dumps({"obs_version": 2, "obs_dim": 31}))
     assert demo.read_obs_version(tmp_path) == 2
+
+
+# --- DemoSession ---
+
+SMALL_MAP = MapRequest(seed=3, size=4.0, max_slope_deg=5.0, n_rocks=0, n_ditches=0)
+SNAPSHOT_KEYS = {
+    "map_id", "policy", "status", "failure", "head", "yaw", "body", "trail", "path", "waypoints",
+    "reached", "goal", "replans", "surface", "sim_time",
+}  # fmt: skip
+
+
+def session(req: MapRequest = SMALL_MAP) -> demo.DemoSession:
+    made = demo.DemoSession(demo.load_controller("scripted"))
+    made.new_map(req)
+    return made
+
+
+def rock_at(made: demo.DemoSession) -> tuple[float, float]:
+    world = made.world
+    x, y, _ = world.rocks[0]
+    return float(x), float(y)
+
+
+def test_new_map_spawns_the_worm_at_the_centre() -> None:
+    made = demo.DemoSession(demo.load_controller("scripted"))
+    assert made.map_id == 0
+    made.new_map(SMALL_MAP)
+    snap = made.snapshot()
+    assert made.map_id == 1 and snap["map_id"] == 1
+    assert snap["head"] == pytest.approx([0.0, 0.0], abs=0.05)
+    assert snap["status"] == "idle" and snap["policy"] == "scripted"
+    made.new_map(MapRequest(seed=4, size=5.0))
+    assert made.map_id == 2 and made.world.seed == 4
+
+
+def test_goal_returns_a_plan_with_waypoints() -> None:
+    made = session()
+    answer = made.goal((1.0, 0.5))
+    assert answer["ok"] is True
+    plan = answer["plan"]
+    assert plan["waypoints"][-1] == pytest.approx([1.0, 0.5])
+    assert plan["path"][0] == pytest.approx([0.0, 0.0], abs=0.05)
+    assert plan["cost"] > 0 and plan["goal_snapped"] is False
+    assert made.snapshot()["status"] == "driving"
+    assert made.snapshot()["goal"] == pytest.approx([1.0, 0.5])
+
+
+def test_goal_inside_a_rock_returns_the_reason() -> None:
+    made = session(MapRequest(seed=1, size=5.0, n_rocks=6, n_ditches=0))
+    answer = made.goal(rock_at(made))
+    assert answer == {"ok": False, "reason": "GOAL_BLOCKED", "detail": answer["detail"]}
+    assert "obstacle" in answer["detail"]
+    assert made.snapshot()["status"] == "idle"
+    assert made.goal((99.0, 0.0))["reason"] == "OUT_OF_BOUNDS"
+
+
+def test_tick_moves_the_worm_toward_the_goal() -> None:
+    made = session()
+    made.goal((1.0, 0.5))
+    before = made.snapshot()
+    made.tick(200)
+    after = made.snapshot()
+
+    def distance(snap: dict) -> float:  # type: ignore[type-arg]
+        return math.dist(snap["head"], (1.0, 0.5))
+
+    assert distance(after) < distance(before) - 0.3
+    assert after["sim_time"] == pytest.approx(10.0) and len(after["trail"]) > 10
+
+
+def test_tick_does_nothing_while_idle_and_stops_at_the_goal() -> None:
+    made = session()
+    made.tick(20)
+    assert made.snapshot()["sim_time"] == 0.0
+    made.goal((0.4, 0.0))
+    made.tick(2000)
+    snap = made.snapshot()
+    assert snap["status"] == "reached" and snap["sim_time"] < 60.0
+    assert math.dist(snap["head"], (0.4, 0.0)) < 0.15
+
+
+def test_snapshot_is_json_serializable_and_has_the_documented_keys() -> None:
+    made = session()
+    assert set(made.snapshot()) == SNAPSHOT_KEYS
+    made.goal((1.0, 0.5))
+    made.tick(30)
+    snap = json.loads(json.dumps(made.snapshot()))
+    assert set(snap) == SNAPSHOT_KEYS
+    assert len(snap["body"]) == 5 and len(snap["body"][0]) == 2
+    assert snap["surface"] in {"concrete", "grass", "sand"}
+    assert snap["reached"] == 0 and snap["replans"] == 0 and snap["failure"] is None
+
+
+def test_a_new_goal_while_driving_replans_from_the_current_position() -> None:
+    made = session()
+    made.goal((1.0, 0.5))
+    made.tick(100)
+    head = made.snapshot()["head"]
+    answer = made.goal((-1.0, -0.5))
+    assert answer["ok"] is True
+    assert answer["plan"]["path"][0] == pytest.approx(head, abs=1e-6)
+    assert made.snapshot()["goal"] == pytest.approx([-1.0, -0.5])
+    assert math.dist(head, (0.0, 0.0)) > 0.2  # it did not go back to the centre
+
+
+def test_map_png_is_a_png_of_the_world_size() -> None:
+    import io
+
+    import imageio.v2 as imageio
+
+    made = session()
+    data = made.map_png()
+    assert data[:8] == b"\x89PNG\r\n\x1a\n"
+    image = imageio.imread(io.BytesIO(data))
+    info = made.map_info()
+    assert image.shape[:2] == (info["height"], info["width"]) == (600, 600)
+    assert info["extent"] == pytest.approx([-2.0, 2.0, -2.0, 2.0])
+    assert info["px_per_m"] == pytest.approx(150.0) and info["map_id"] == 1
+    assert made.map_png(blocked=True) != data  # the blocked overlay changes pixels
+
+
+def test_frame_jpeg_is_none_without_rendering_and_a_jpeg_with_it(rendering: None) -> None:
+    assert session().frame_jpeg() is None
+    made = demo.DemoSession(demo.load_controller("scripted"), render=True)
+    made.new_map(SMALL_MAP)
+    frame = made.frame_jpeg()
+    made.close()
+    assert frame is not None and frame[:2] == b"\xff\xd8"
