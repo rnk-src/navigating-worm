@@ -88,6 +88,10 @@ class World:
         rx, ry = self.half_extent
         return np.stack([cell[..., 1] * self.cell - rx, cell[..., 0] * self.cell - ry], axis=-1)
 
+    def cell_xy(self) -> NDArray[np.float64]:
+        """Return the (rows, cols, 2) xy position of every cell."""
+        return self.to_xy(np.moveaxis(np.indices(self.shape), 0, -1))
+
     def contains(self, xy: ArrayLike) -> NDArray[np.bool_]:
         point = np.asarray(xy, dtype=np.float64)
         rx, ry = self.half_extent
@@ -204,7 +208,8 @@ def _relief(
     d_row, d_col = np.gradient(hills, cfg.cell)
     steepest = float(np.hypot(d_row, d_col).max())
     limit = math.tan(math.radians(cfg.max_slope_deg))
-    return hills * min(1.0, limit / steepest) if steepest > 0.0 else hills
+    scaled: NDArray[np.float64] = hills * min(1.0, limit / max(steepest, 1e-12))
+    return scaled
 
 
 def _surface(
@@ -302,7 +307,7 @@ def generate(cfg: WorldConfig, seed: int) -> World:
     relief_rng, rough_rng, surface_rng, ditch_rng, rock_rng = (
         np.random.default_rng(s) for s in np.random.SeedSequence(seed).spawn(5)
     )
-    xy = base.to_xy(np.stack(np.indices(shape), axis=-1))
+    xy = base.cell_xy()
     spawn = _smoothstep((np.linalg.norm(xy, axis=-1) - cfg.clear_radius) / _SPAWN_BLEND)
 
     surface = _surface(cfg, shape, surface_rng)
