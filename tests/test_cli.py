@@ -97,3 +97,21 @@ def test_make_world_writes_a_map_png(tmp_path: Path) -> None:
     image = imageio.imread(out)
     assert image.shape == (160, 160, 3)  # 4 m at 40 pixels per metre
     assert "seed 3" in made.stdout and "concrete 100 %" in made.stdout
+
+
+def test_plan_map_writes_a_plan_png_or_reports_why_not(tmp_path: Path) -> None:
+    out = tmp_path / "plan.png"
+    world = ["--seed", "3", "--size", "6", "--rocks", "6"]
+    made = run("plan_map.py", *world, "--start", "0", "0", "--goal", "2", "1.5", "--out", str(out))
+    assert made.returncode == 0, made.stderr
+    import imageio.v2 as imageio
+
+    image = imageio.imread(out)
+    assert image.shape == (240, 240, 3)
+    blue = (image[..., 2].astype(int) - image[..., 0].astype(int) > 120).sum()
+    assert blue > 100  # the path is drawn
+    assert "waypoints" in made.stdout
+
+    outside = run("plan_map.py", *world, "--start", "0", "0", "--goal", "9", "9")
+    assert outside.returncode == 2
+    assert "infeasible: OUT_OF_BOUNDS" in outside.stdout
