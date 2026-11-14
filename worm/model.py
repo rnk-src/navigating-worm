@@ -5,6 +5,7 @@ from __future__ import annotations
 import mujoco
 import numpy as np
 
+from worm import mapviz
 from worm.spec import WormSpec
 from worm.world import World
 
@@ -48,8 +49,13 @@ def to_xml(spec: WormSpec, world: World | None = None) -> str:
         terrain_asset = (
             f'<hfield name="{HFIELD}" nrow="{rows}" ncol="{cols}" '
             f'size="{rx} {ry} {HFIELD_ZMAX} {_HFIELD_BASE}"/>'
+            # One texel per cell. `load_world` paints it with the surface class colours.
+            f'<texture name="{HFIELD}" type="2d" builtin="flat" rgb1="1 1 1" '
+            f'width="{cols}" height="{rows}"/>'
+            f'<material name="{HFIELD}" texture="{HFIELD}" texrepeat="1 1" texuniform="false" '
+            'specular="0" shininess="0"/>'
         )
-        floor = f'<geom name="{FLOOR}" type="hfield" hfield="{HFIELD}" rgba="0.6 0.6 0.6 1"/>'
+        floor = f'<geom name="{FLOOR}" type="hfield" hfield="{HFIELD}" material="{HFIELD}"/>'
     pairs = "".join(
         f'<pair geom1="{FLOOR}" geom2="seg{i}" condim="3" friction="1 1 0.005 0.0001 0.0001"/>'
         for i in range(spec.n_segments)
@@ -106,6 +112,10 @@ def load_world(m: mujoco.MjModel, world: World) -> None:
     if zmax > HFIELD_ZMAX:
         raise ValueError(f"world height {zmax:.2f} m exceeds the hfield range {HFIELD_ZMAX} m")
     m.hfield_data[:] = data * np.float32(zmax / HFIELD_ZMAX)
+    # The texture's first row is the +y edge, so the rows are flipped.
+    start = int(m.tex_adr[m.texture(HFIELD).id])
+    colours = mapviz.cell_colours(world)[::-1]
+    m.tex_data[start : start + colours.size] = colours.ravel()
 
 
 def segment_body_ids(model: mujoco.MjModel, spec: WormSpec) -> list[int]:

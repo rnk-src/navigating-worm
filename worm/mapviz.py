@@ -39,10 +39,17 @@ def world_to_pixel(world: World, xy: ArrayLike, px_per_m: float) -> NDArray[np.i
     return np.clip(np.floor(pixel).astype(np.int_), 0, [width - 1, height - 1])
 
 
+def cell_colours(world: World) -> Image:
+    """Return the (rows, cols, 3) class colour of every cell, with rocks drawn dark."""
+    palette = np.array([CLASS_COLORS[c] for c in TerrainClass], dtype=np.uint8)
+    colours: Image = palette[world.surface]
+    colours[world.obstacle] = ROCK_COLOR
+    return colours
+
+
 def world_image(world: World, px_per_m: float = 40.0, shade: bool = True) -> Image:
     """Return an RGB map: class colour times hillshade, with rocks drawn dark."""
-    palette = np.array([CLASS_COLORS[c] for c in TerrainClass], dtype=np.float64)
-    colour = palette[world.surface]
+    colour = cell_colours(world).astype(np.float64)
     if shade:
         slope = world.gradient
         normal = np.concatenate([-slope, np.ones((*slope.shape[:2], 1))], axis=-1)
@@ -52,7 +59,7 @@ def world_image(world: World, px_per_m: float = 40.0, shade: bool = True) -> Ima
         depth = world.heights.max() - world.heights
         factor = (light / _LIGHT[2]) ** 2 * (1.0 - np.clip(depth, 0.0, 0.5))
         colour = colour * np.clip(factor, 0.3, 1.4)[..., None]
-    colour[world.obstacle] = ROCK_COLOR
+        colour[world.obstacle] = ROCK_COLOR
     cells = np.clip(colour, 0, 255).astype(np.uint8)
 
     height, width = image_size(world, px_per_m)

@@ -470,3 +470,30 @@ def test_world_env_renders_the_terrain(rendering: None) -> None:
     frame = env.render()
     assert frame is not None and frame.std() > 0
     env.close()
+
+
+def test_world_render_shows_class_colours(rendering: None) -> None:
+    base = wd.flat((4.0, 4.0))
+    surface = base.surface.copy()
+    surface[:, 41:] = TerrainClass.SAND  # +x
+    surface[41:, :41] = TerrainClass.GRASS  # -x, +y
+    world = wd.World(base.heights, surface, base.obstacle, base.cell)
+    env = WormGoalEnv(world=world, render_mode="rgb_array", randomizer=DomainRandomizer(0.0))
+    env.reset(seed=0)
+    env.set_overview((0.0, 0.0), 2.0)
+    frame = env.render()
+    env.close()
+    assert frame is not None
+
+    def colour(x: float, y: float) -> tuple[int, int, int]:
+        # The overview shows 2.4 m above and below the centre in 240 pixels. +y is up.
+        r, g, b = frame[round(240 - 100 * y), round(320 + 100 * x)].astype(int)
+        return int(r), int(g), int(b)
+
+    for x, y in [(1.0, 1.0), (1.0, -1.0)]:
+        r, g, b = colour(x, y)
+        assert r > b + 40 and r > g  # sand tan
+    r, g, b = colour(-1.0, 1.0)
+    assert g > r + 30 and g > b + 30  # grass green
+    r, g, b = colour(-1.0, -1.0)
+    assert abs(r - g) < 20 and abs(g - b) < 20  # stone grey
