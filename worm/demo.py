@@ -171,6 +171,11 @@ class DemoSession:
         return self._map_id
 
     @property
+    def control_dt(self) -> float:
+        """Return the seconds of sim time in one control step."""
+        return self._parts()[0].spec_.control_dt
+
+    @property
     def world(self) -> World:
         if self._world is None:
             raise RuntimeError("no map yet: call new_map() first")
