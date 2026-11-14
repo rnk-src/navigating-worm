@@ -12,8 +12,8 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecNormalize
 
+from worm.controllers import Policy
 from worm.env import WormGoalEnv
-from worm.route import Policy
 
 POLICY_FILE = "policy.zip"
 NORM_FILE = "vecnormalize.pkl"

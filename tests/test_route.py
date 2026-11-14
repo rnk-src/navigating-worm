@@ -2,18 +2,13 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
+from worm.controllers import bearing_steer
 from worm.env import WormGoalEnv
 from worm.randomize import DomainRandomizer
 from worm.route import make_waypoints, run_route
+from worm.spec import WormSpec, obs_layout
 
-
-def steer(obs: NDArray[np.float32]) -> NDArray[np.float32]:
-    """Hand-written controller: steady gait, turn bias proportional to the bearing."""
-    sin_b, cos_b = obs[11:13]
-    action = np.zeros(7, dtype=np.float32)
-    action[0], action[1] = 0.8, 0.2
-    action[2] = np.clip(1.0 * np.arctan2(sin_b, cos_b), -1.0, 1.0)
-    return action
+steer = bearing_steer(obs_layout(WormSpec()))
 
 
 def idle(obs: NDArray[np.float32]) -> NDArray[np.float32]:
