@@ -61,6 +61,21 @@ The flat-plane env is unchanged; a test pins its trajectory. On slopes the smoot
 
 The committed policy never trained on a world. On 10 m mixed-surface worlds without obstacles it still reaches 10 of 10 targets with slopes up to 10 degrees, and 9 of 10 with slopes up to 15 degrees. It does not avoid rocks or ditches; that is the planner's task (M2b).
 
+## Planner
+`worm/planner.py` turns a world and a goal into a waypoint route, or a reason why no route exists. It builds a cost map (sand costs more than grass, grass more than stone; rocks, ditch walls and steep ground are blocked), searches it with A*, pulls the path tight and cuts it into waypoints. `worm/navigate.py` drives the route with any policy and replans when the worm is stuck or off the path.
+
+![A planned route](results/plan_example.png)
+
+Blue is the path, red dots are waypoints, yellow is the goal. Red-tinted ground is blocked. The route stays on stone where it can.
+
+```
+uv run python scripts/plan_map.py --seed 1 --goal 4 3.5 --out plan.png
+uv run python scripts/navigate.py --policy results/policy --seed 1 --goal 4 3.5 --video nav.mp4
+uv run python scripts/navigate.py --policy scripted --seed 1 --goal 4 3.5   # no trained policy needed
+```
+
+With the committed policy, the navigator reached 10 of 10 goals on ten generated 10 m worlds with rocks, ditches and slopes up to 15 degrees. Each goal was at least 4 m away. [docs/decisions/0003-planner.md](docs/decisions/0003-planner.md) has the details.
+
 ## Roadmap
 The next milestones are in [docs/PLAN.md](docs/PLAN.md#milestones), with the reasons for their order in [docs/decisions/](docs/decisions/):
 1. **M2a Terrain world:** seeded heightfield worlds with hills, rocks, ditches and a surface class per cell.
