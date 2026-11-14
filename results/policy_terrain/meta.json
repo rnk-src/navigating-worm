@@ -1,0 +1,8 @@
+{
+  "obs_version": 2,
+  "obs_dim": 31,
+  "action_dim": 7,
+  "steps": 20004864,
+  "config": "terrain_v2",
+  "git_commit": "28ecbcb"
+}

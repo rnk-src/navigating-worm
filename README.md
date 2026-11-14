@@ -106,11 +106,48 @@ scripts/cloud/run_remote.sh --ssh-key NAME --config configs/terrain_v2.toml --se
 
 Billing stops only when the server is deleted. The script deletes it only after the results are complete on your machine, and says so when it does not. A failsafe on the VM deletes the server after `--max-hours` (default 12) in every case. Check the Hetzner console afterwards.
 
-A run writes checkpoints every 1M steps and keeps the newest three. SIGTERM saves a checkpoint, and `--resume` continues the step count. On a 12-core laptop CPU with 8 envs the run makes about 2,600 steps per second, so 20M steps take a little over two hours.
+A run writes checkpoints every 1M steps and keeps the newest three. SIGTERM saves a checkpoint, and `--resume` continues the step count. On a 12-core laptop CPU with 8 envs the run makes about 2,600 steps per second, so 20M steps take about two and a half hours.
 
 `eval_terrain.py` drives one planned route of at least 5 m on each of 50 generated 10 m worlds per level. Level 1 is level ground with mixed surfaces. Level 2 adds hills up to 10 degrees and roughness. Level 3 is the full terrain: hills up to 18 degrees, rocks and ditches.
 
-Results: the 20M-step run of training seed 0 is in progress. The table goes here when its eval is done.
+### Result
+Training seed 0, 20M steps, about 2 h 25 min on a 12-core laptop CPU with 8 envs. The policy is in `results/policy_terrain`. "Flat policy" is the committed M1 policy in `results/policy` (observation v1), on the same 50 worlds and routes per level.
+
+| Level | Flat policy (v1) | Terrain policy (v2) |
+|---|---|---|
+| 1, mixed surfaces, level ground | 50 / 50 | **50 / 50** |
+| 2, hills to 10 degrees, roughness | 50 / 50 | **50 / 50** |
+| 3, full terrain with rocks and ditches | 46 / 50 | **49 / 50** |
+| Flat 100 m routes (regression check) | 50 / 50 | 49 / 50 |
+
+Per-terrain breakdown on level 3:
+
+| | Flat policy (v1) | Terrain policy (v2) |
+|---|---|---|
+| Speed on concrete | 0.115 m/s | 0.165 m/s |
+| Speed on grass | 0.093 m/s | 0.126 m/s |
+| Speed on sand | 0.071 m/s | 0.102 m/s |
+| Time share concrete / grass / sand | 27 / 37 / 36 % | 25 / 39 / 36 % |
+| Replans per route | 0.34 | 0.12 |
+| Mean time per route | 79 s | 61 s |
+| Failures by class under the head | concrete 2, grass 1, sand 1 | concrete 1 |
+
+The gate for this milestone, set before training:
+
+| Metric | Target | Result | |
+|---|---|---|---|
+| Level 1 success | at least 90 % | 100 % | pass |
+| Level 3 success | at least 80 % | 98 % | pass |
+| Beats the flat policy | 10 points more on level 3, or 15 % faster on sand at equal success | 6 points more; 43 % faster on sand | pass, by the sand branch |
+| Per-terrain breakdown | reported | above | pass |
+| Flat 100 m routes | at least 48 / 50 | 49 / 50 | pass |
+
+Notes:
+- The flat policy already reaches 92 % on level 3, so a gain of 10 points was out of reach. The terrain policy is faster on every surface and replans less.
+- The terrain policy lost one flat 100 m route that the flat policy completes.
+- This is one training seed. Seeds 1 and 2 are not evaluated yet.
+- The click-to-go demo still accepts only observation v1, so it drives the flat policy.
+- The tables are in `results/terrain_eval_seed0.json` and `results/terrain_eval_baseline_v1.json`.
 
 ## Roadmap
 The next milestones are in docs/PLAN.md, with the reasons for their order in docs/decisions/:

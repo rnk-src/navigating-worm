@@ -75,3 +75,10 @@ def test_load_policy_rejects_a_meta_that_does_not_match_the_normalizer(run_dir: 
     (broken / "meta.json").write_text(json.dumps({**meta, "obs_version": 2, "obs_dim": 31}))
     with pytest.raises(ValueError, match="obs"):
         load_policy(broken)
+
+
+def test_committed_terrain_policy_loads_as_obs_v2() -> None:
+    policy = load_policy(Path(__file__).parent.parent / "results" / "policy_terrain")
+    assert policy.obs_version == 2 and policy.meta["config"] == "terrain_v2"
+    obs, _ = WormGoalEnv(obs_version=2).reset(seed=0)
+    assert policy(obs).shape == (7,)
