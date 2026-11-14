@@ -35,7 +35,7 @@ Known limits:
 ## How it works
 - **Body:** 5 box segments, 4 yaw servos, modelled on the Feetech SCS0009.
 - **Action (7-D):** amplitude, frequency and turn bias of a serpenoid wave, plus one residual per joint.
-- **Observation (24-D):** only what the real robot can sense. Joint feedback, IMU, target bearing and distance, previous action, terrain one-hot.
+- **Observation (24-D):** only what the real robot can sense. Joint feedback, IMU, target bearing and distance, previous action, terrain one-hot. Observation v2 (31-D) adds the terrain class and the ground heights ahead.
 - **Friction:** a worm moves because the ground resists sideways motion more than forward motion. MuJoCo's own per-axis contact friction is fixed to world axes, so it does not follow a turning segment. A test demonstrates this. The sim instead applies a smooth body-frame drag to each segment (`worm/friction.py`).
 - **Sim-to-real preparation:** servo delay, lag, deadband and speed cap; sensor quantization, bias and noise; randomized friction, mass and servo strength.
 
@@ -83,6 +83,25 @@ uv run python scripts/demo.py --open
 ```
 
 The page shows a top-down map. Click a point and the worm plans a route and drives it. A click on a rock shows why the goal is refused. A click while the worm drives re-routes it. The sliders make a new map, change the speed and pause the run. Use `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
+
+## Train the terrain policy
+The terrain policy takes observation v2: the 24 inputs of v1 plus the terrain class 0.25 m ahead (3) and four ground heights ahead of the head (4), 31 in total. Both additions model real sensors, with classifier errors and range noise. It trains on a curriculum of 8 m worlds: level ground of one class, then mixed surfaces, then hills and roughness, then steeper hills with shallow ditches and rocks. No rock sits on the line to the target, because the planner owns obstacle avoidance. Each saved run has a `meta.json` with its observation version, so old policies keep loading.
+
+```
+uv run python scripts/train.py --config configs/terrain_v2_smoke.toml           # 20k steps, a pipeline check
+scripts/cloud/launch.sh --config configs/terrain_v2.toml --seeds 0 --n-envs 8   # 20M steps, detached
+scripts/cloud/status.sh                                                         # steps, level, speed, time left
+scripts/cloud/stop.sh                                                           # checkpoint and end
+scripts/cloud/launch.sh --config configs/terrain_v2.toml --seeds 0 --n-envs 8 --resume
+uv run tensorboard --logdir runs
+uv run python scripts/eval_terrain.py --policy runs/terrain_v2_seed0 --maps 50 --flat-routes 50 --json eval.json
+```
+
+A run writes checkpoints every 1M steps and keeps the newest three. SIGTERM saves a checkpoint, and `--resume` continues the step count. On a 12-core laptop CPU with 8 envs the run makes about 2,600 steps per second, so 20M steps take a little over two hours.
+
+`eval_terrain.py` drives one planned route of at least 5 m on each of 50 generated 10 m worlds per level. Level 1 is level ground with mixed surfaces. Level 2 adds hills up to 10 degrees and roughness. Level 3 is the full terrain: hills up to 18 degrees, rocks and ditches.
+
+Results: the 20M-step run of training seed 0 is in progress. The table goes here when its eval is done.
 
 ## Roadmap
 The next milestones are in docs/PLAN.md, with the reasons for their order in docs/decisions/:
