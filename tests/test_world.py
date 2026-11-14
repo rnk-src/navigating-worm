@@ -85,3 +85,94 @@ def test_hfield_data_is_normalized_and_row_major() -> None:
     assert data.shape == (world.shape[0] * world.shape[1],)
     assert data.max() == pytest.approx(1.0) and data.min() == pytest.approx(0.0)
     assert data[: world.shape[1]] == pytest.approx(world.heights[0] / zmax)
+
+
+# --- generator ---
+
+SMALL = wd.WorldConfig(size=(5.0, 5.0), n_rocks=6, n_ditches=2)
+
+
+def test_generate_is_deterministic_for_a_seed_and_differs_across_seeds() -> None:
+    first, again, other = wd.generate(SMALL, 1), wd.generate(SMALL, 1), wd.generate(SMALL, 2)
+    assert np.array_equal(first.heights, again.heights)
+    assert np.array_equal(first.surface, again.surface)
+    assert not np.array_equal(first.heights, other.heights)
+    assert first.seed == 1 and first.shape == (101, 101)
+
+
+def test_heights_are_nonnegative_and_slope_respects_max_slope() -> None:
+    cfg = wd.WorldConfig(size=(5.0, 5.0), n_rocks=0, n_ditches=0, roughness=0.0, max_slope_deg=8.0)
+    world = wd.generate(cfg, 0)
+    assert world.heights.min() >= 0.0
+    assert 4.0 < world.slope_deg().max() <= 8.0 + 1e-3
+
+
+def test_roughness_adds_millimetre_relief_per_class() -> None:
+    cfg = wd.WorldConfig(
+        size=(3.0, 3.0), n_rocks=0, n_ditches=0, hill_height=0.0, mix=(1.0, 0.0, 0.0)
+    )
+    rough = wd.generate(cfg, 0)
+    assert 0.002 <= rough.heights.max() - rough.heights.min() <= 0.02
+
+
+def test_surface_mix_matches_the_requested_fractions_within_5_percent() -> None:
+    cfg = wd.WorldConfig(size=(4.95, 4.95), mix=(0.6, 0.2, 0.2), n_rocks=0, n_ditches=0)
+    world = wd.generate(cfg, 3)
+    assert world.shape == (100, 100)
+    fractions = np.bincount(world.surface.ravel(), minlength=3) / world.surface.size
+    assert fractions == pytest.approx([0.6, 0.2, 0.2], abs=0.05)
+
+
+def test_mix_of_one_class_gives_a_single_class_world() -> None:
+    cfg = wd.WorldConfig(size=(2.0, 2.0), mix=(0.0, 1.0, 0.0), n_rocks=0, n_ditches=0)
+    assert np.all(wd.generate(cfg, 0).surface == TerrainClass.GRASS)
+
+
+def test_rocks_are_marked_as_obstacles_and_raised_by_at_least_min_height() -> None:
+    cfg = wd.WorldConfig(size=(5.0, 5.0), n_rocks=5, n_ditches=0)
+    bare = wd.generate(wd.WorldConfig(size=(5.0, 5.0), n_rocks=0, n_ditches=0), 4)
+    world = wd.generate(cfg, 4)
+    assert world.obstacle.any()
+    raised = world.heights - bare.heights
+    assert raised.max() >= cfg.rock_height[0] * 0.9
+    assert np.all(raised[~world.obstacle] == pytest.approx(0.0, abs=1e-6))
+    assert np.all(raised[world.obstacle] > 0.0)
+
+
+def test_rocks_keep_a_gap_that_the_worm_can_pass() -> None:
+    world = wd.generate(wd.WorldConfig(size=(5.0, 5.0), n_rocks=12, n_ditches=0), 5)
+    centres = world.rocks[:, :2]
+    radii = world.rocks[:, 2]
+    assert len(centres) >= 2
+    for i in range(len(centres)):
+        for j in range(i + 1, len(centres)):
+            gap = np.linalg.norm(centres[i] - centres[j]) - radii[i] - radii[j]
+            assert gap >= 0.4
+
+
+def test_ditches_are_depressions_of_at_least_min_depth() -> None:
+    cfg = wd.WorldConfig(size=(5.0, 5.0), n_rocks=0, n_ditches=2)
+    bare = wd.generate(wd.WorldConfig(size=(5.0, 5.0), n_rocks=0, n_ditches=0), 6)
+    world = wd.generate(cfg, 6)
+    # Every world is shifted so that its lowest point is zero. Compare the relief only.
+    drop = bare.heights - world.heights
+    drop -= drop.min()
+    assert drop.max() >= cfg.ditch_depth[0] * 0.9
+    assert np.count_nonzero(drop > 1e-6) < 0.3 * drop.size
+
+
+def test_spawn_area_is_clear_and_flat() -> None:
+    for seed in range(5):
+        world = wd.generate(wd.WorldConfig(size=(4.0, 4.0), n_rocks=20, n_ditches=4), seed)
+        rows, cols = np.indices(world.shape)
+        xy = world.to_xy(np.stack([rows, cols], axis=-1))
+        near = np.linalg.norm(xy, axis=-1) <= 0.5
+        assert not world.obstacle[near].any()
+        assert world.slope_deg()[near].max() < 5.0
+
+
+def test_smooth_noise_is_zero_mean_unit_std_and_correlated() -> None:
+    noise = wd.smooth_noise((64, 64), 8.0, np.random.default_rng(0))
+    assert abs(noise.mean()) < 1e-9 and noise.std() == pytest.approx(1.0)
+    neighbour = np.corrcoef(noise[:, :-1].ravel(), noise[:, 1:].ravel())[0, 1]
+    assert neighbour > 0.9
