@@ -117,7 +117,11 @@ navigating-worm/
    5. `train.py`: PPO short smoke run in tests (~2k steps); then a real run with as many steps as the session allows.
    6. `route.py` + `eval_route.py`; report success out of 10.
    7. README (results, how to run), `PROGRESS.md`, PR.
-2. **M2 Terrain-conditioned policy:** 3 friction regimes + terrain one-hot; laptop CNN on real surface photos.
+2. **M2 Terrain-conditioned navigation**, in four parts. [MVP_PLAN.md](MVP_PLAN.md) is the execution plan. Decisions are recorded in [decisions/](decisions/).
+   - **M2a World.** A seeded procedural world: a heightfield with hills, roughness, rocks and ditches, plus a surface class per cell (concrete, grass, sand). It compiles to a MuJoCo `hfield`. Each segment takes its friction, viscous drag and contact softness from the cell under it. The flat-plane env stays bit-identical.
+   - **M2b Planner.** A pure-Python cost map and A* search over a world. It returns a smoothed waypoint route or `Infeasible(reason)`. A navigator drives the route with any policy and replans when the worm is stuck or off the path.
+   - **M2c Click-to-go.** A local web page served by the standard-library HTTP server. It shows a top-down map; a click sets a goal, and the worm plans and drives there. It runs with the committed policy or a scripted fallback.
+   - **M2d Terrain-aware policy.** Observation v2 adds the terrain class ahead and four height samples ahead, all plausible for the real camera and ToF sensor. Training uses a curriculum of worlds, config files, checkpoints and resume. Old policies keep loading through a versioned observation layout. The laptop CNN on real surface photos moves to M4.
 3. **M3 Hardware + sysID:** print the body, `ServoBus` driver + fake, servo step-response video, tilt-board friction, ArUco calibration fit.
 4. **M4 Deploy:** MLP export + codegen header, int8 CNN (ESP-DL/TFLM), EKF, ToF stop, open-loop vs policy validation.
 5. **Stretch:** feasibility planner, micro-ROS bridge, teacher–student/RMA, v2 lidar body.
