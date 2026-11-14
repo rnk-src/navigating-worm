@@ -133,11 +133,13 @@ def test_observation_reports_joint_motion_since_the_last_step() -> None:
 
 @pytest.mark.parametrize(
     ("terrain", "one_hot"),
-    [(None, [1, 0, 0]), (TerrainClass.GRASS, [0, 1, 0]), (TerrainClass.SAND, [0, 0, 1])],
+    [
+        (TerrainClass.CONCRETE, [1, 0, 0]),
+        (TerrainClass.GRASS, [0, 1, 0]),
+        (TerrainClass.SAND, [0, 0, 1]),
+    ],
 )
-def test_observation_carries_the_terrain_one_hot(
-    terrain: TerrainClass | None, one_hot: list[int]
-) -> None:
+def test_observation_carries_the_terrain_one_hot(terrain: TerrainClass, one_hot: list[int]) -> None:
     env = WormGoalEnv(terrain=terrain)
     obs, _ = env.reset(seed=0)
     assert obs_part(env, obs, "terrain").tolist() == one_hot
@@ -279,3 +281,24 @@ def test_render_fps_follows_the_control_rate() -> None:
 
     assert WormGoalEnv().metadata["render_fps"] == 20
     assert WormGoalEnv(spec=WormSpec(control_dt=0.1)).metadata["render_fps"] == 10
+
+
+def test_observed_terrain_matches_the_sampled_class_when_none_is_forced() -> None:
+    env = WormGoalEnv()
+    seen = set()
+    for seed in range(12):
+        obs, _ = env.reset(seed=seed)
+        hot = obs_part(env, obs, "terrain")
+        assert hot.sum() == 1
+        assert int(hot.argmax()) == int(env.params.terrain)
+        seen.add(int(hot.argmax()))
+    assert seen == {0, 1, 2}
+
+
+def test_mass_scale_also_scales_inertia() -> None:
+    env = WormGoalEnv()
+    nominal = env.model.body_inertia.copy()
+    env.reset(seed=1)
+    scale = env.params.mass_scale
+    assert scale != 1.0
+    assert env.model.body_inertia[1:] == pytest.approx(nominal[1:] * scale)
