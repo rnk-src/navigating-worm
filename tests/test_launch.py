@@ -142,3 +142,10 @@ def test_status_exit_code_tells_whether_a_run_is_still_going(tmp_path: Path) -> 
         os.kill(pid, 9)
     wait_for_exit([pid], 30.0)
     assert ln.main(["status", "--runs", str(tmp_path), "--exit-code"]) == 0
+
+
+def test_runs_get_one_math_thread_per_process_unless_the_caller_sets_it() -> None:
+    env = ln.run_environment({"PATH": "x"})
+    assert env["OMP_NUM_THREADS"] == env["OPENBLAS_NUM_THREADS"] == env["MKL_NUM_THREADS"] == "1"
+    assert env["PYTHONUNBUFFERED"] == "1" and env["PATH"] == "x"
+    assert ln.run_environment({"OMP_NUM_THREADS": "4"})["OMP_NUM_THREADS"] == "4"
