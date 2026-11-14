@@ -165,6 +165,15 @@ class Navigator:
         return np.array(self._trail).reshape(-1, 2)
 
     @property
+    def trail_length(self) -> int:
+        """Return the number of control steps driven so far."""
+        return len(self._trail)
+
+    def sampled_trail(self, every: int, last: int) -> Array:
+        """Return the newest `last` of every `every`-th trail point, without copying the rest."""
+        return np.array(self._trail[::every][-last:]).reshape(-1, 2)
+
+    @property
     def reached(self) -> int:
         """Return the number of waypoints of the current plan reached so far."""
         return 0 if self._follower is None else self._follower.reached

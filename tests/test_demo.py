@@ -200,3 +200,31 @@ def test_frame_jpeg_is_none_without_rendering_and_a_jpeg_with_it(rendering: None
     frame = made.frame_jpeg()
     made.close()
     assert frame is not None and frame[:2] == b"\xff\xd8"
+
+
+def test_a_failed_new_map_keeps_the_current_map(monkeypatch: pytest.MonkeyPatch) -> None:
+    made = session()
+
+    def broken(_world: object) -> None:
+        raise RuntimeError("costmap failed")
+
+    monkeypatch.setattr(demo.planner, "build_costmap", broken)
+    with pytest.raises(RuntimeError, match="costmap failed"):
+        made.new_map(MapRequest(seed=9, size=5.0))
+    assert made.map_id == 1 and made.snapshot()["map_id"] == 1
+    made.tick(1)  # the old map still works
+
+
+def test_a_huge_integer_is_rejected_as_not_finite() -> None:
+    with pytest.raises(ValueError, match="finite"):
+        MapRequest.from_json({"size": 10**400})
+
+
+def test_sampled_trail_matches_a_slice_of_the_full_trail() -> None:
+    made = session()
+    made.goal((1.0, 0.5))
+    made.tick(30)
+    nav = made._nav
+    assert nav is not None
+    assert nav.trail_length == len(nav.trail) > 10
+    assert (nav.sampled_trail(4, 5) == nav.trail[::4][-5:]).all()
