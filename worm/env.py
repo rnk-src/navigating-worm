@@ -28,8 +28,10 @@ _SPAWN_CLEARANCE = 0.003  # m, drop height above the highest ground under the bo
 _SETTLE_STEPS = 25  # physics steps after a spawn in a world
 _TARGET_TRIES = 20
 
-# Returns the world of one episode. Every world must have the same shape.
-WorldSampler = Callable[[np.random.Generator], World]
+# Returns the world of one episode from (rng, start, target). The band from the start to
+# the target is where the worm will drive. Every world must have the same shape.
+WorldSampler = Callable[[np.random.Generator, Array, Array], World]
+_ORIGIN: Array = np.zeros(2)
 
 
 class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
@@ -85,7 +87,8 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
             self._world = world
         elif world is not None:
             self._sampler = world
-            self._world = world(np.random.default_rng(0))  # fixes the compiled shape
+            # This first world only fixes the compiled shape.
+            self._world = world(np.random.default_rng(0), _ORIGIN, _ORIGIN)
         self.model = model.build(self.spec_, self._world)
         self.data = mujoco.MjData(self.model)
         self._nominal_mass = self.model.body_mass.copy()
@@ -122,11 +125,18 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         rng = self.np_random
         options = options or {}
         self.params = self.randomizer.sample(rng, self.terrain)
+        start = np.asarray(options.get("start", (0.0, 0.0)), dtype=np.float64)
+        target: Array | None = None
+        if "target" in options:
+            target = np.asarray(options["target"], dtype=np.float64)
         if self._world is not None:
             if "world" in options:
                 self._set_world(options["world"])
             elif self._sampler is not None:
-                self._set_world(self._sampler(rng))
+                # The sampler keeps the way to the target free, so the target comes first.
+                if target is None:
+                    target = self._sample_target(start, avoid_obstacles=False)
+                self._set_world(self._sampler(rng, start, target))
             self.params = replace(self.params, surfaces=self.randomizer.sample_surfaces(rng))
         self._apply_params(self.params)
 
@@ -134,7 +144,6 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         yaw = rng.uniform(-math.pi, math.pi)
         if "yaw" in options:
             yaw = float(options["yaw"])
-        start = np.asarray(options.get("start", (0.0, 0.0)), dtype=np.float64)
         self.data.qpos[:2] = start
         self.data.qpos[3:7] = (math.cos(yaw / 2), 0.0, 0.0, math.sin(yaw / 2))
         mujoco.mj_forward(self.model, self.data)
@@ -145,13 +154,27 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         self._prev_action = np.zeros(self.actions.dim)
         self._prev_joint_pos = np.zeros(self.spec_.n_joints)
         self._joint_delta = np.zeros(self.spec_.n_joints)
-        if "target" in options:
-            target = np.asarray(options["target"], dtype=np.float64)
-        else:
+        if target is None:
             target = self._sample_target(start)
         return self.set_target(target), self._info({})
 
-    def _sample_target(self, start: Array) -> Array:
+    def set_level(self, level: int) -> None:
+        """Set the level of the curriculum that samples the worlds."""
+        setter = getattr(self._sampler, "set_level", None)
+        if setter is None:
+            raise ValueError("this env has no curriculum")
+        setter(level)
+
+    def get_level(self) -> int:
+        """Return the level of the curriculum, or 0 without one."""
+        return int(getattr(self._sampler, "level", 0))
+
+    @property
+    def level(self) -> int:
+        """Return the level of the current world, or 0 without a curriculum."""
+        return int(getattr(self._sampler, "last_level", 0))
+
+    def _sample_target(self, start: Array, avoid_obstacles: bool = True) -> Array:
         """Draw a target at `target_range` from the start. In a world, keep it reachable."""
         rng, world = self.np_random, self._world
         target = start
@@ -162,7 +185,7 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
             if world is None:
                 break
             row, col = world.to_cell(target)
-            if world.contains(target) and not world.obstacle[row, col]:
+            if world.contains(target) and not (avoid_obstacles and world.obstacle[row, col]):
                 break
         else:
             assert world is not None

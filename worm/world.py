@@ -20,6 +20,8 @@ _ROCK_GAP = 0.4  # m, free space kept between two rocks so that the worm can pas
 _SPAWN_BLEND = 0.5  # m, width of the band where the relief fades into the flat spawn area
 _ROUGHNESS_SCALE = 0.1  # m, correlation length of the fine relief
 _PLACE_TRIES = 40
+# (a, b, half_width): the band of `half_width` metres around the segment from a to b.
+Corridor = tuple[ArrayLike, ArrayLike, float]
 
 
 @dataclass(frozen=True)
@@ -267,10 +269,24 @@ def _ditches(
     return depth
 
 
+def _distance_to_leg(point: NDArray[np.float64], leg: Corridor) -> float:
+    a, b = np.asarray(leg[0], dtype=np.float64), np.asarray(leg[1], dtype=np.float64)
+    along = b - a
+    length2 = float(along @ along)
+    t = 0.0 if length2 == 0.0 else float(np.clip((point - a) @ along / length2, 0.0, 1.0))
+    return float(np.linalg.norm(point - (a + t * along)))
+
+
 def _rocks(
-    cfg: WorldConfig, world_xy: NDArray[np.float64], rng: np.random.Generator
+    cfg: WorldConfig,
+    world_xy: NDArray[np.float64],
+    rng: np.random.Generator,
+    corridor: Corridor | None = None,
 ) -> tuple[NDArray[np.float64], NDArray[np.bool_], NDArray[np.float64]]:
-    """Return (height added, obstacle mask, rocks as [x, y, radius]). Rocks are smooth caps."""
+    """Return (height added, obstacle mask, rocks as [x, y, radius]). Rocks are smooth caps.
+
+    No rock touches the `corridor`.
+    """
     added = np.zeros(world_xy.shape[:2])
     placed: list[tuple[float, float, float]] = []
     half = 0.5 * np.array(cfg.size)
@@ -281,6 +297,10 @@ def _rocks(
             # Snap the centre to a grid point so that the peak reaches the full height.
             centre = np.rint((rng.uniform(-half, half) + half) / cfg.cell) * cfg.cell - half
             if np.linalg.norm(centre) < cfg.clear_radius + radius + cfg.cell:
+                continue
+            if corridor is not None and (
+                _distance_to_leg(centre, corridor) < corridor[2] + radius + cfg.cell
+            ):
                 continue
             if any(
                 math.hypot(centre[0] - x, centre[1] - y) < radius + r + _ROCK_GAP
@@ -296,8 +316,10 @@ def _rocks(
     return added, added > 0.0, rocks
 
 
-def generate(cfg: WorldConfig, seed: int) -> World:
+def generate(cfg: WorldConfig, seed: int, corridor: Corridor | None = None) -> World:
     """Return a seeded world: hills, fine relief, surface patches, ditches and rocks.
+
+    `corridor` is (a, b, half_width): the band around the segment a-b gets no rock.
 
     Each feature draws from its own random stream. Changing the rock count therefore
     leaves the hills, the patches and the ditches of a seed unchanged.
@@ -316,7 +338,7 @@ def generate(cfg: WorldConfig, seed: int) -> World:
     fine = smooth_noise(shape, _ROUGHNESS_SCALE / cfg.cell, rough_rng)
     heights += np.clip(0.5 * fine, -1.0, 1.0) * amplitude * spawn
     heights -= _ditches(cfg, xy, ditch_rng)
-    added, obstacle, rocks = _rocks(cfg, xy, rock_rng)
+    added, obstacle, rocks = _rocks(cfg, xy, rock_rng, corridor)
     heights += added
     heights -= heights.min()
     return World(heights.astype(np.float32), surface, obstacle, cfg.cell, seed, rocks)
