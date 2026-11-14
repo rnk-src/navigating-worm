@@ -40,6 +40,49 @@ Known limits:
 - **Sim-to-real preparation:** servo delay, lag, deadband and speed cap; sensor quantization, bias and noise; randomized friction, mass and servo strength.
 
 
+## Terrain worlds
+`worm/world.py` generates a seeded world: hills, fine roughness, rocks, ditches and a surface class per cell (stone/concrete, grass, sand). The world compiles to a MuJoCo heightfield. Each body segment takes its friction, viscous drag and contact softness from the cell under it, and the policy's terrain input is the class under the head.
+
+```
+uv run python scripts/make_world.py --seed 1 --size 10 --out map.png   # top-down map
+uv run python scripts/bench_env.py --world 10m                          # env throughput
+```
+
+```python
+from worm.env import WormGoalEnv
+from worm.world import WorldConfig, generate
+
+env = WormGoalEnv(world=generate(WorldConfig(size=(10.0, 10.0)), seed=1))
+obs, info = env.reset(seed=0, options={"start": (0.0, 0.0), "target": (2.0, 1.0)})
+```
+
+The flat-plane env is unchanged; a test pins its trajectory. On slopes the smooth drag model alone creeps downhill, so worlds add real contact friction.
+
+The committed policy never trained on a world. On 10 m mixed-surface worlds without obstacles it still reaches 10 of 10 targets with slopes up to 10 degrees, and 9 of 10 with slopes up to 15 degrees. It does not avoid rocks or ditches; that is the planner's task (M2b).
+
+## Planner
+`worm/planner.py` turns a world and a goal into a waypoint route, or a reason why no route exists. It builds a cost map (sand costs more than grass, grass more than stone; rocks, ditch walls and steep ground are blocked), searches it with A*, pulls the path tight and cuts it into waypoints. `worm/navigate.py` drives the route with any policy and replans when the worm is stuck or off the path.
+
+![A planned route](results/plan_example.png)
+
+Blue is the path, red dots are waypoints, yellow is the goal. Red-tinted ground is blocked. The route stays on stone where it can.
+
+```
+uv run python scripts/plan_map.py --seed 1 --goal 4 3.5 --out plan.png
+uv run python scripts/navigate.py --policy results/policy --seed 1 --goal 4 3.5 --video nav.mp4
+uv run python scripts/navigate.py --policy scripted --seed 1 --goal 4 3.5   # no trained policy needed
+```
+
+With the committed policy, the navigator reached 10 of 10 goals on ten generated 10 m worlds with rocks, ditches and slopes up to 15 degrees. Each goal was at least 4 m away.
+
+## Click to go
+
+```
+uv run python scripts/demo.py --open
+```
+
+The page shows a top-down map. Click a point and the worm plans a route and drives it. A click on a rock shows why the goal is refused. A click while the worm drives re-routes it. The sliders make a new map, change the speed and pause the run. Use `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
+
 ## Roadmap
 The next milestones:
 1. **M2a Terrain world:** seeded heightfield worlds with hills, rocks, ditches and a surface class per cell.
