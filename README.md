@@ -76,6 +76,14 @@ uv run python scripts/navigate.py --policy scripted --seed 1 --goal 4 3.5   # no
 
 With the committed policy, the navigator reached 10 of 10 goals on ten generated 10 m worlds with rocks, ditches and slopes up to 15 degrees. Each goal was at least 4 m away. [docs/decisions/0003-planner.md](docs/decisions/0003-planner.md) has the details.
 
+## Click to go
+
+```
+uv run python scripts/demo.py --open
+```
+
+The page shows a top-down map. Click a point and the worm plans a route and drives it. A click on a rock shows why the goal is refused. A click while the worm drives re-routes it. The sliders make a new map, change the speed and pause the run. Use `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
+
 ## Roadmap
 The next milestones are in [docs/PLAN.md](docs/PLAN.md#milestones), with the reasons for their order in [docs/decisions/](docs/decisions/):
 1. **M2a Terrain world:** seeded heightfield worlds with hills, rocks, ditches and a surface class per cell.
