@@ -12,7 +12,7 @@ from worm.terrain import TerrainClass
 def ramp(deg: float = 10.0, size: float = 2.0, cell: float = 0.05) -> wd.World:
     """Return a world that rises along +x at `deg` degrees."""
     base = wd.flat((size, size), cell)
-    xs = base.to_xy(np.stack(np.indices(base.shape), axis=-1))[..., 0]
+    xs = base.cell_xy()[..., 0]
     heights = (xs - xs.min()) * math.tan(math.radians(deg))
     return wd.World(heights.astype(np.float32), base.surface, base.obstacle, cell)
 
@@ -164,9 +164,7 @@ def test_ditches_are_depressions_of_at_least_min_depth() -> None:
 def test_spawn_area_is_clear_and_flat() -> None:
     for seed in range(5):
         world = wd.generate(wd.WorldConfig(size=(4.0, 4.0), n_rocks=20, n_ditches=4), seed)
-        rows, cols = np.indices(world.shape)
-        xy = world.to_xy(np.stack([rows, cols], axis=-1))
-        near = np.linalg.norm(xy, axis=-1) <= 0.5
+        near = np.linalg.norm(world.cell_xy(), axis=-1) <= 0.5
         assert not world.obstacle[near].any()
         assert world.slope_deg()[near].max() < 5.0
 
