@@ -151,3 +151,14 @@ def test_navigate_can_record_a_video_with_the_map_beside_the_follow_camera(
 
     frames = imageio.mimread(video)
     assert len(frames) >= 5 and frames[0].shape == (480, 1120, 3)  # 640 camera + 480 map
+
+
+def test_calibrate_costs_prints_a_speed_and_a_cost_per_class() -> None:
+    import re
+
+    done = run("calibrate_costs.py", "--policy", "scripted", "--targets", "1", "--distance", "0.5")
+    assert done.returncode == 0, done.stderr
+    for name in ("concrete", "grass", "sand"):
+        assert re.search(rf"{name}: \d\.\d\d\d m/s", done.stdout)
+    costs = re.search(r"surface_cost = \(1\.00, (\d\.\d\d), (\d\.\d\d)\)", done.stdout)
+    assert costs and float(costs.group(1)) > 0.5 and float(costs.group(2)) > 0.5
