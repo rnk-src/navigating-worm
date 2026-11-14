@@ -66,7 +66,7 @@ def test_load_config_parses_every_section_and_rejects_unknown_keys(tmp_path: Pat
 
 def test_every_committed_config_loads() -> None:
     names = {load_config(path).run.name for path in CONFIGS.glob("*.toml")}
-    assert names == {"m1_flat", "terrain_v2", "terrain_v2_smoke"}
+    assert names == {"m1_flat", "terrain_v2", "terrain_v2_sanity", "terrain_v2_smoke"}
     flat = load_config(CONFIGS / "m1_flat.toml")
     assert flat.env.world == "flat" and flat.env.obs_version == 1 and flat.run.steps == 3_000_000
 
