@@ -303,3 +303,8 @@ def test_plan_10m_world_runs_under_1s() -> None:
     result = planner.plan(costmap, costmap.to_xy(corners[0]), costmap.to_xy(corners[1]))
     assert time.perf_counter() - begin < 1.0
     assert isinstance(result, planner.Plan | planner.Infeasible)
+
+
+def test_cost_defaults_are_ordered_concrete_grass_sand() -> None:
+    # Measured with scripts/calibrate_costs.py on the committed policy: 1.00, 1.22, 2.03.
+    assert CostConfig().surface_cost == (1.0, 1.2, 2.0)

@@ -24,7 +24,7 @@ class CostConfig:
     """How terrain turns into travel cost. Lengths in metres, angles in degrees."""
 
     resolution: float = 0.1  # planning grid; the world grid is pooled down to this
-    surface_cost: tuple[float, float, float] = (1.0, 1.4, 2.0)  # per TerrainClass, 1 / speed
+    surface_cost: tuple[float, float, float] = (1.0, 1.2, 2.0)  # per TerrainClass; measured
     slope_weight: float = 1.0
     max_slope_deg: float = 20.0  # steeper cells are blocked
     max_step: float = 0.012  # a larger height step to a neighbour cell is blocked
