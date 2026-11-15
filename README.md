@@ -35,7 +35,7 @@ Known limits:
 ## How it works
 - **Body:** 5 box segments, 4 yaw servos, modelled on the Feetech SCS0009.
 - **Action (7-D):** amplitude, frequency and turn bias of a serpenoid wave, plus one residual per joint.
-- **Observation (24-D):** only what the real robot can sense. Joint feedback, IMU, target bearing and distance, previous action, terrain one-hot.
+- **Observation (24-D):** only what the real robot can sense. Joint feedback, IMU, target bearing and distance, previous action, terrain one-hot. Observation v2 (31-D) adds the terrain class and the ground heights ahead.
 - **Friction:** a worm moves because the ground resists sideways motion more than forward motion. MuJoCo's own per-axis contact friction is fixed to world axes, so it does not follow a turning segment. A test demonstrates this. The sim instead applies a smooth body-frame drag to each segment (`worm/friction.py`).
 - **Sim-to-real preparation:** servo delay, lag, deadband and speed cap; sensor quantization, bias and noise; randomized friction, mass and servo strength.
 
@@ -82,6 +82,75 @@ uv run python scripts/demo.py --open
 ```
 
 The page shows a top-down map. Click a point and the worm plans a route and drives it. A click on a rock shows why the goal is refused. A click while the worm drives re-routes it. The sliders make a new map, change the speed and pause the run. Use `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
+
+## Train the terrain policy
+The terrain policy takes observation v2: the 24 inputs of v1 plus the terrain class 0.25 m ahead (3) and four ground heights ahead of the head (4), 31 in total. Both additions model real sensors, with classifier errors and range noise. It trains on a curriculum of 8 m worlds: level ground of one class, then mixed surfaces, then hills and roughness, then steeper hills with shallow ditches and rocks. No rock sits on the line to the target, because the planner owns obstacle avoidance. Each saved run has a `meta.json` with its observation version, so old policies keep loading.
+
+```
+uv run python scripts/train.py --config configs/terrain_v2_smoke.toml           # 20k steps, a pipeline check
+scripts/cloud/launch.sh --config configs/terrain_v2.toml --seeds 0 --n-envs 8   # 20M steps, detached
+scripts/cloud/status.sh                                                         # steps, level, speed, time left
+scripts/cloud/stop.sh                                                           # checkpoint and end
+scripts/cloud/launch.sh --config configs/terrain_v2.toml --seeds 0 --n-envs 8 --resume
+uv run tensorboard --logdir runs
+uv run python scripts/eval_terrain.py --policy runs/terrain_v2_seed0 --maps 50 --flat-routes 50 --json eval.json
+```
+
+To train on a rented Hetzner Cloud VM instead, one command creates the server, trains every seed, copies the results back, verifies them and deletes the server. It needs the `hcloud` CLI and an SSH key in the Hetzner project. Try it with `--dry-run` first: that prints every command and runs nothing.
+
+```
+export HCLOUD_TOKEN=...        # in the shell only, never in a file
+scripts/cloud/run_remote.sh --ssh-key NAME --config configs/terrain_v2.toml --seeds 0,1,2 --n-envs 15
+```
+
+Billing stops only when the server is deleted. The script deletes it only after the results are complete on your machine, and says so when it does not. A failsafe on the VM deletes the server after `--max-hours` (default 12) in every case. Check the Hetzner console afterwards.
+
+A run writes checkpoints every 1M steps and keeps the newest three. SIGTERM saves a checkpoint, and `--resume` continues the step count. On a 12-core laptop CPU with 8 envs the run makes about 2,600 steps per second, so 20M steps take about two and a half hours.
+
+`eval_terrain.py` drives one planned route of at least 5 m on each of 50 generated 10 m worlds per level. Level 1 is level ground with mixed surfaces. Level 2 adds hills up to 10 degrees and roughness. Level 3 is the full terrain: hills up to 18 degrees, rocks and ditches.
+
+### Result
+Training seed 0, 20M steps, about 2 h 25 min on a 12-core laptop CPU with 8 envs. The policy is in `results/policy_terrain`. "Flat policy" is the committed M1 policy in `results/policy` (observation v1), on the same 50 worlds and routes per level.
+
+| Level | Flat policy (v1) | Terrain policy (v2), seed 0 | Seed 1 | Seed 2 |
+|---|---|---|---|---|
+| 1, mixed surfaces, level ground | 50 / 50 | **50 / 50** | 50 / 50 | 50 / 50 |
+| 2, hills to 10 degrees, roughness | 50 / 50 | **50 / 50** | 50 / 50 | 50 / 50 |
+| 3, full terrain with rocks and ditches | 46 / 50 | **49 / 50** | 47 / 50 | 49 / 50 |
+| Sand speed on level 3 | 0.071 m/s | **0.102 m/s** | 0.099 m/s | 0.099 m/s |
+| Flat 100 m routes (regression check) | 50 / 50 | 49 / 50 | 49 / 50 | 49 / 50 |
+
+Seed 0 trained on the laptop. Seeds 1 and 2 trained on a rented 16-core cloud VM, about 4.9 hours for both.
+
+Per-terrain breakdown on level 3, seed 0:
+
+| | Flat policy (v1) | Terrain policy (v2) |
+|---|---|---|
+| Speed on concrete | 0.115 m/s | 0.165 m/s |
+| Speed on grass | 0.093 m/s | 0.126 m/s |
+| Speed on sand | 0.071 m/s | 0.102 m/s |
+| Time share concrete / grass / sand | 27 / 37 / 36 % | 25 / 39 / 36 % |
+| Replans per route | 0.34 | 0.12 |
+| Mean time per route | 79 s | 61 s |
+| Failures by class under the head | concrete 2, grass 1, sand 1 | concrete 1 |
+
+The gate for this milestone, set before training, for seed 0:
+
+| Metric | Target | Result | |
+|---|---|---|---|
+| Level 1 success | at least 90 % | 100 % | pass |
+| Level 3 success | at least 80 % | 98 % | pass |
+| Beats the flat policy | 10 points more on level 3, or 15 % faster on sand at equal success | 6 points more; 43 % faster on sand | pass, by the sand branch |
+| Per-terrain breakdown | reported | above | pass |
+| Flat 100 m routes | at least 48 / 50 | 49 / 50 | pass |
+
+Notes:
+- The flat policy already reaches 92 % on level 3, so a gain of 10 points was out of reach. The terrain policy is faster on every surface and replans less.
+- Seeds 1 and 2 pass the same gate. Seed 1 gains only 2 points on level 3 and passes by sand speed (39 % faster).
+- All three seeds, and the flat policy, fail the route on world 2013 of level 3.
+- Each terrain policy lost one flat 100 m route that the flat policy completes.
+- The click-to-go demo still accepts only observation v1, so it drives the flat policy.
+- The tables are in `results/terrain_eval_seed{0,1,2}.json` and `results/terrain_eval_baseline_v1.json`.
 
 ## Roadmap
 The next milestones:

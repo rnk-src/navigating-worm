@@ -51,6 +51,29 @@ class ActionSpec:
         return 3 + self.n_joints
 
 
+# A field size is a count, or the name of the `ObsLayout` attribute that holds the count.
+_V1_FIELDS: tuple[tuple[str, int | str], ...] = (
+    ("joint_pos", "n_joints"),
+    ("joint_delta", "n_joints"),
+    ("yaw_rate", 1),
+    ("roll_pitch", 2),
+    ("bearing", 2),  # sin, cos of the target bearing in the head frame
+    ("distance", 1),
+    ("prev_action", "action_dim"),
+    ("terrain", N_TERRAIN_CLASSES),  # the class under the head
+)
+# A new version appends fields. It never reorders the fields of an older version.
+_OBS_FIELDS: dict[int, tuple[tuple[str, int | str], ...]] = {
+    1: _V1_FIELDS,
+    2: (
+        *_V1_FIELDS,
+        ("terrain_ahead", N_TERRAIN_CLASSES),  # the class 0.25 m ahead of the head
+        ("height_ahead", 4),  # ground height ahead, relative to the head, 2 x 2 points
+    ),
+}
+LATEST_OBS_VERSION = 2
+
+
 @dataclass(frozen=True)
 class ObsLayout:
     """Named slices of the flat observation vector."""
@@ -59,24 +82,18 @@ class ObsLayout:
     action_dim: int = 7
     max_distance: float = 3.0  # m, the distance observation is clipped here, then divided by it
     yaw_rate_scale: float = 5.0  # rad/s, the yaw rate observation is divided by this
+    version: int = 1
     slices: dict[str, slice] = field(init=False)
 
     def __post_init__(self) -> None:
-        sizes = {
-            "joint_pos": self.n_joints,
-            "joint_delta": self.n_joints,
-            "yaw_rate": 1,
-            "roll_pitch": 2,
-            "bearing": 2,  # sin, cos of the target bearing in the head frame
-            "distance": 1,
-            "prev_action": self.action_dim,
-            "terrain": N_TERRAIN_CLASSES,
-        }
+        if self.version not in _OBS_FIELDS:
+            raise ValueError(f"unknown observation version {self.version}")
         slices: dict[str, slice] = {}
         start = 0
-        for name, size in sizes.items():
-            slices[name] = slice(start, start + size)
-            start += size
+        for name, size in _OBS_FIELDS[self.version]:
+            count = int(getattr(self, size)) if isinstance(size, str) else size
+            slices[name] = slice(start, start + count)
+            start += count
         object.__setattr__(self, "slices", slices)
 
     @property
@@ -88,5 +105,5 @@ def action_spec(spec: WormSpec) -> ActionSpec:
     return ActionSpec(n_joints=spec.n_joints)
 
 
-def obs_layout(spec: WormSpec) -> ObsLayout:
-    return ObsLayout(n_joints=spec.n_joints, action_dim=action_spec(spec).dim)
+def obs_layout(spec: WormSpec, version: int = 1) -> ObsLayout:
+    return ObsLayout(n_joints=spec.n_joints, action_dim=action_spec(spec).dim, version=version)

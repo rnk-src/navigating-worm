@@ -17,12 +17,10 @@ from pathlib import Path
 import numpy as np
 
 from worm import mapviz, planner
-from worm.cli import add_world_arguments, world_from_args
-from worm.controllers import bearing_steer
+from worm.cli import add_world_arguments, policy_from_arg, world_from_args
 from worm.env import WormGoalEnv
 from worm.navigate import NavConfig, Navigator
 from worm.terrain import TerrainClass
-from worm.training import load_policy
 from worm.video import FrameRecorder
 
 if __name__ == "__main__":
@@ -40,13 +38,12 @@ if __name__ == "__main__":
     world = world_from_args(args)
     costmap = planner.build_costmap(world)
     cfg = NavConfig()
+    policy, obs_version = policy_from_arg(args.policy)
     env = WormGoalEnv(
         world=world,
         episode_seconds=cfg.waypoint_timeout,
         render_mode="rgb_array" if args.video else None,
-    )
-    policy = (
-        bearing_steer(env.layout) if args.policy == "scripted" else load_policy(Path(args.policy))
+        obs_version=obs_version,
     )
     env.reset(seed=args.env_seed, options={"start": args.start, "target": args.goal})
     nav = Navigator(env, policy, costmap, cfg)

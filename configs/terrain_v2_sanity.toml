@@ -1,0 +1,37 @@
+# A 2M-step check that the terrain setup learns at levels 0 and 1.
+
+[run]
+name = "terrain_v2_sanity"
+steps = 2_000_000
+n_envs = 8
+seed = 0
+
+[env]
+obs_version = 2
+world = "curriculum"
+world_size = 8.0
+cell = 0.05
+randomizer_level = 1.0
+
+[curriculum]
+mode = "timesteps"
+boundaries = [0.0, 0.5, 2.0, 3.0]  # level 1 from the middle; levels 2 and 3 never
+replay_lower = 0.3
+
+[ppo]
+n_steps = 1024
+batch_size = 4096
+n_epochs = 10
+gamma = 0.99
+learning_rate = 3e-4
+net_arch = [64, 64]
+log_std_init = -1.0
+
+[checkpoint]
+every_steps = 500_000
+keep = 3
+
+[eval]
+every_steps = 0
+maps = 5
+map_size = 10.0
