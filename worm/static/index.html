@@ -562,6 +562,8 @@ $("cam-toggle").addEventListener("click", () => {
   $("cam").hidden = !camOn;
 });
 if (!api.camera && !api.frameUrl) disableCam("This source has no follow cam");
+// The follow cam starts on, when the source has one.
+if (camAvailable) $("cam-toggle").click();
 function disableCam(reason) {
   camAvailable = false; camOn = false; $("cam").hidden = true;
   const button = $("cam-toggle");
