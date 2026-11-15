@@ -149,3 +149,28 @@ def test_runs_get_one_math_thread_per_process_unless_the_caller_sets_it() -> Non
     assert env["OMP_NUM_THREADS"] == env["OPENBLAS_NUM_THREADS"] == env["MKL_NUM_THREADS"] == "1"
     assert env["PYTHONUNBUFFERED"] == "1" and env["PATH"] == "x"
     assert ln.run_environment({"OMP_NUM_THREADS": "4"})["OMP_NUM_THREADS"] == "4"
+
+
+def test_a_second_launch_keeps_the_runs_of_the_first_in_the_record(tmp_path: Path) -> None:
+    first = ln.launch(SMOKE, [0], 1, steps=2_000_000, runs=tmp_path, tensorboard=False)
+    pid0 = json.loads(first.read_text())["runs"][0]["pid"]
+    pids = [pid0]
+    try:
+        second = ln.launch(SMOKE, [1], 1, steps=2_000_000, runs=tmp_path, tensorboard=False)
+        runs = json.loads(second.read_text())["runs"]
+        pids = [run["pid"] for run in runs]
+        assert second == first and [run["seed"] for run in runs] == [0, 1] and pids[0] == pid0
+        assert ln.any_running(tmp_path)
+        assert sorted(ln.stop(tmp_path)) == sorted(pids)
+        wait_for_exit(pids, 60.0)
+    finally:
+        for pid in pids:
+            if ln.is_training(pid):
+                os.kill(pid, 9)
+
+
+def test_relaunching_a_seed_replaces_its_entry_in_the_record(tmp_path: Path) -> None:
+    old = {"mode": "nohup", "runs": [{"seed": 0, "pid": 1, "out": "a"}, {"seed": 1, "pid": 2}]}
+    new = [{"seed": 1, "pid": 9}]
+    merged = ln.merge_runs(old["runs"], new)
+    assert merged == [{"seed": 0, "pid": 1, "out": "a"}, {"seed": 1, "pid": 9}]

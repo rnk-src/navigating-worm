@@ -119,6 +119,17 @@ def _tmux(run: Launch) -> int:
     return int(pane.stdout.split()[0])
 
 
+def merge_runs(old: list[dict[str, Any]], new: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return the runs of a launch record after a new launch, ordered by seed.
+
+    A seed that starts again replaces its entry. Every other seed stays, so that
+    `status` and `stop` still know its pid.
+    """
+    seeds = {run["seed"] for run in new}
+    kept = [run for run in old if run["seed"] not in seeds]
+    return sorted(kept + new, key=lambda run: int(run["seed"]))
+
+
 def launch(
     config: Path,
     seeds: Sequence[int],
@@ -150,12 +161,13 @@ def launch(
                 "log": str(run.log),
             }
         )
-    record: dict[str, Any] = {"mode": mode, "runs": started}
+    path = ROOT / runs / f"{load_config(config).run.name}_launch.json"
+    earlier = json.loads(path.read_text())["runs"] if path.exists() else []
+    record: dict[str, Any] = {"mode": mode, "runs": merge_runs(earlier, started)}
     if tensorboard:
         board = [sys.executable, "-m", "tensorboard.main", "--logdir", str(runs)]
         board += ["--port", str(TENSORBOARD_PORT)]  # it binds to localhost only
         record["tensorboard_pid"] = _detached(board, ROOT / runs / "tensorboard.log")
-    path = ROOT / runs / f"{load_config(config).run.name}_launch.json"
     path.write_text(json.dumps(record, indent=2) + "\n")
     return path
 
