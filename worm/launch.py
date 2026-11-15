@@ -67,7 +67,9 @@ def tmux_command(run: Launch) -> list[str]:
 def _command_of(pid: int) -> str:
     """Return the command line of a live process, or "" when it has ended."""
     done = subprocess.run(
-        ["ps", "-p", str(pid), "-o", "stat=,command="], capture_output=True, text=True
+        ["ps", "-ww", "-p", str(pid), "-o", "stat=", "-o", "command="],
+        capture_output=True,
+        text=True,
     )
     fields = done.stdout.strip().split(None, 1)
     if done.returncode != 0 or len(fields) < 2 or fields[0].startswith("Z"):

@@ -174,3 +174,16 @@ def test_relaunching_a_seed_replaces_its_entry_in_the_record(tmp_path: Path) -> 
     new = [{"seed": 1, "pid": 9}]
     merged = ln.merge_runs(old["runs"], new)
     assert merged == [{"seed": 0, "pid": 1, "out": "a"}, {"seed": 1, "pid": 9}]
+
+
+def test_a_training_run_is_recognized_in_a_narrow_terminal(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # ps cuts its output to COLUMNS. A long interpreter path then hides the script name.
+    monkeypatch.setenv("COLUMNS", "20")
+    record = ln.launch(SMOKE, [0], 1, steps=2_000_000, runs=tmp_path, tensorboard=False)
+    pid = json.loads(record.read_text())["runs"][0]["pid"]
+    try:
+        assert ln.is_training(pid)
+    finally:
+        os.kill(pid, 9)
