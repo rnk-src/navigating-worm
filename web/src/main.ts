@@ -1,6 +1,7 @@
 // Browser entry. The page reads window.wormApi, so set it first and synchronously. The heavy
 // libraries load afterwards, and the start-up panel shows the progress.
 import { BrowserApi } from './api';
+import { createFollowCam } from './camera';
 import { Engine } from './engine';
 
 declare const __PYODIDE_VERSION__: string;
@@ -13,6 +14,9 @@ declare global {
 const PYODIDE_URL = `https://cdn.jsdelivr.net/pyodide/v${__PYODIDE_VERSION__}/full/`;
 
 const api = new BrowserApi();
+let engine: Engine | null = null;
+// The page checks api.camera once at start-up, so set it now. three.js loads when the cam opens.
+api.camera = createFollowCam(api, () => engine);
 window.wormApi = api;
 window.addEventListener('message', (e) => api.hostMessage(e.data));
 
@@ -39,7 +43,7 @@ async function boot(): Promise<void> {
     text('py/browser.py'),
     text('py/policy.json'),
   ]);
-  const engine = await Engine.create({
+  engine = await Engine.create({
     mj,
     pyodide,
     wheel,
