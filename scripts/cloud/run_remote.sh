@@ -13,6 +13,7 @@
 # Options: --type ccx63  --location LOC  --image ubuntu-24.04  --max-hours 12
 #          --results DIR (default runs/cloud_<server name>)  --poll-seconds 300
 #          --dry-run (print every command, run nothing)  --keep (do not delete)
+#          --max-poll-failures 12 (give up after this many failed status checks in a row)
 #          --server NAME (attach to a server that already trains: wait, copy, verify, delete)
 set -euo pipefail
 cd "$(dirname "$0")/../.."
@@ -30,6 +31,8 @@ RESULTS=""
 DRY=0
 KEEP=0
 SERVER=""
+MAX_POLL_FAILURES=12
+GONE=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --type) TYPE="$2"; shift 2 ;;
@@ -45,6 +48,7 @@ while [ $# -gt 0 ]; do
     --dry-run) DRY=1; shift ;;
     --keep) KEEP=1; shift ;;
     --server) SERVER="$2"; shift 2 ;;
+    --max-poll-failures) MAX_POLL_FAILURES="$2"; shift 2 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -75,7 +79,9 @@ DELETED=0
 report() {
   rm -f "$KNOWN_HOSTS"
   [ "$CREATED" = 1 ] || return 0
-  if [ "$DELETED" = 1 ]; then
+  if [ "$GONE" = 1 ]; then
+    echo "Server $NAME no longer exists. Check: hcloud server list"
+  elif [ "$DELETED" = 1 ]; then
     echo "Server $NAME: deleted."
   else
     echo "WARNING: server $NAME is NOT deleted. It bills until you delete it:"
@@ -137,12 +143,29 @@ fi
 
 # 6. Wait until no run is going. status.sh exits with 3 while one is.
 echo "+ poll every $POLL s: ssh root@$IP 'bash scripts/cloud/status.sh --exit-code'"
+failures=0
 while [ "$DRY" = 0 ]; do
   code=0
   ssh "${SSH_OPTS[@]}" "root@$IP" "$ON_VM && bash scripts/cloud/status.sh --tail 0 --exit-code" \
     < /dev/null || code=$?
   [ "$code" != 0 ] || break
-  [ "$code" = 3 ] || echo "status check failed with code $code; try again"
+  if [ "$code" = 3 ]; then
+    failures=0
+  else
+    failures=$((failures + 1))
+    # Only a "not found" answer means the server is gone. A network fault is not proof.
+    answer="$(hcloud server describe "$NAME" 2>&1 > /dev/null || true)"
+    if grep -qi "not found" <<< "$answer"; then
+      GONE=1
+      echo "The server is gone. The failsafe may have deleted it. Its results are lost." >&2
+      exit 1
+    fi
+    if [ "$failures" -ge "$MAX_POLL_FAILURES" ]; then
+      echo "$failures status checks failed in a row. Give up; the server still exists." >&2
+      exit 1
+    fi
+    echo "status check failed with code $code ($failures in a row); try again"
+  fi
   sleep "$POLL"
 done
 
