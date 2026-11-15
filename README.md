@@ -113,14 +113,17 @@ A run writes checkpoints every 1M steps and keeps the newest three. SIGTERM save
 ### Result
 Training seed 0, 20M steps, about 2 h 25 min on a 12-core laptop CPU with 8 envs. The policy is in `results/policy_terrain`. "Flat policy" is the committed M1 policy in `results/policy` (observation v1), on the same 50 worlds and routes per level.
 
-| Level | Flat policy (v1) | Terrain policy (v2) |
-|---|---|---|
-| 1, mixed surfaces, level ground | 50 / 50 | **50 / 50** |
-| 2, hills to 10 degrees, roughness | 50 / 50 | **50 / 50** |
-| 3, full terrain with rocks and ditches | 46 / 50 | **49 / 50** |
-| Flat 100 m routes (regression check) | 50 / 50 | 49 / 50 |
+| Level | Flat policy (v1) | Terrain policy (v2), seed 0 | Seed 1 | Seed 2 |
+|---|---|---|---|---|
+| 1, mixed surfaces, level ground | 50 / 50 | **50 / 50** | 50 / 50 | 50 / 50 |
+| 2, hills to 10 degrees, roughness | 50 / 50 | **50 / 50** | 50 / 50 | 50 / 50 |
+| 3, full terrain with rocks and ditches | 46 / 50 | **49 / 50** | 47 / 50 | 49 / 50 |
+| Sand speed on level 3 | 0.071 m/s | **0.102 m/s** | 0.099 m/s | 0.099 m/s |
+| Flat 100 m routes (regression check) | 50 / 50 | 49 / 50 | 49 / 50 | 49 / 50 |
 
-Per-terrain breakdown on level 3:
+Seed 0 trained on the laptop. Seeds 1 and 2 trained on a rented 16-core cloud VM, about 4.9 hours for both.
+
+Per-terrain breakdown on level 3, seed 0:
 
 | | Flat policy (v1) | Terrain policy (v2) |
 |---|---|---|
@@ -132,7 +135,7 @@ Per-terrain breakdown on level 3:
 | Mean time per route | 79 s | 61 s |
 | Failures by class under the head | concrete 2, grass 1, sand 1 | concrete 1 |
 
-The gate for this milestone, set before training:
+The gate for this milestone, set before training, for seed 0:
 
 | Metric | Target | Result | |
 |---|---|---|---|
@@ -144,10 +147,11 @@ The gate for this milestone, set before training:
 
 Notes:
 - The flat policy already reaches 92 % on level 3, so a gain of 10 points was out of reach. The terrain policy is faster on every surface and replans less.
-- The terrain policy lost one flat 100 m route that the flat policy completes.
-- This is one training seed. Seeds 1 and 2 are not evaluated yet.
+- Seeds 1 and 2 pass the same gate. Seed 1 gains only 2 points on level 3 and passes by sand speed (39 % faster).
+- All three seeds, and the flat policy, fail the route on world 2013 of level 3.
+- Each terrain policy lost one flat 100 m route that the flat policy completes.
 - The click-to-go demo still accepts only observation v1, so it drives the flat policy.
-- The tables are in `results/terrain_eval_seed0.json` and `results/terrain_eval_baseline_v1.json`.
+- The tables are in `results/terrain_eval_seed{0,1,2}.json` and `results/terrain_eval_baseline_v1.json`.
 
 ## Roadmap
 The next milestones are in docs/PLAN.md, with the reasons for their order in docs/decisions/:
