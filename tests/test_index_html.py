@@ -95,3 +95,12 @@ def test_index_html_themes_the_browser_parts(page: str) -> None:
     for needle in ("::selection", "scrollbar", ":focus-visible", "tabular-nums", "accent-color"):
         assert needle in page, needle
     assert "prefers-reduced-motion" in page
+
+
+def test_the_new_map_request_uses_the_keys_the_server_reads(page: str) -> None:
+    """The server reads `slope`, `rocks` and `ditches`. Other names are silently ignored."""
+    body = page[page.index("api.newMap({") :][:400]
+    for key in ("seed", "size", "mix", "slope", "rocks", "ditches"):
+        assert re.search(rf"\b{key}\s*:", body), key
+    for wrong in ("max_slope_deg", "n_rocks", "n_ditches"):
+        assert wrong not in body, wrong

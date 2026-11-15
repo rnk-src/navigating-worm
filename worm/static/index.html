@@ -529,8 +529,8 @@ $("new-map").addEventListener("click", async () => {
     const result = await api.newMap({
       seed: Number($("seed").value), size: Number($("size").value),
       mix: [Number($("mix-c").value), Number($("mix-g").value), Number($("mix-s").value)],
-      max_slope_deg: Number($("slope").value), n_rocks: Number($("rocks").value),
-      n_ditches: Number($("ditches").value),
+      slope: Number($("slope").value), rocks: Number($("rocks").value),
+      ditches: Number($("ditches").value),
     });
     if (result.ok) { await loadMap(); setDrawer(false); }
     else $("map-error").textContent = result.error || "That map was refused. Change a setting and try again.";
