@@ -41,7 +41,9 @@ class NumpyPolicy:
         return NumpyPolicy(data)
 
     def __call__(self, obs: NDArray[np.float32]) -> NDArray[np.float32]:
-        x = np.clip((np.asarray(obs, dtype=np.float64) - self._mean) / self._std, -self._clip, self._clip)
+        x = np.clip(
+            (np.asarray(obs, dtype=np.float64) - self._mean) / self._std, -self._clip, self._clip
+        )
         for weight, bias in self._hidden:
             x = np.tanh(weight @ x + bias)
         weight, bias = self._head

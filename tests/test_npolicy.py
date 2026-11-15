@@ -45,7 +45,10 @@ def test_the_committed_export_matches_the_committed_policy(trained) -> None:  # 
 
 
 def test_the_policy_module_needs_only_numpy() -> None:
-    code = "import sys, worm.npolicy; print('torch' in sys.modules, 'stable_baselines3' in sys.modules)"
+    code = (
+        "import sys, worm.npolicy; "
+        "print('torch' in sys.modules, 'stable_baselines3' in sys.modules)"
+    )
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
     assert out.stdout.split() == ["False", "False"]
 

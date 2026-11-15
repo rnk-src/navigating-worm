@@ -104,3 +104,26 @@ def test_the_new_map_request_uses_the_keys_the_server_reads(page: str) -> None:
         assert re.search(rf"\b{key}\s*:", body), key
     for wrong in ("max_slope_deg", "n_rocks", "n_ditches"):
         assert wrong not in body, wrong
+
+
+def test_index_html_has_a_loading_and_error_panel(page: str) -> None:
+    for element_id in ("boot", "boot-title", "boot-detail", "boot-retry"):
+        assert f'id="{element_id}"' in page, element_id
+    assert 'id="boot" role="status"' in page
+
+
+def test_index_html_can_take_another_data_source(page: str) -> None:
+    """The browser build sets `window.wormApi` before this script runs."""
+    assert "window.wormApi" in page
+    assert '<script type="module">' in page
+    assert "await api.ready" in page
+
+
+def test_index_html_lets_the_data_source_draw_the_follow_cam(page: str) -> None:
+    """The server sends JPEG frames. The browser build draws its own 3D view."""
+    assert "api.camera.mount" in page and "api.camera.unmount" in page
+    assert "no connection to the server" not in page.lower() or "api.boot" in page
+
+
+def test_index_html_stops_polling_when_the_data_source_failed_to_start(page: str) -> None:
+    assert 'api.boot.state === "error"' in page

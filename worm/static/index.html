@@ -193,6 +193,25 @@
     .hint { font-size: 13px; padding: 2px 8px; }
   }
 
+  /* Shown while another data source, such as the browser engine, starts up. */
+  .app[data-booting] .stage { visibility: hidden; }
+  .boot { position: absolute; z-index: 10; inset: 0; margin: auto; width: min(320px, calc(100% - 2 * var(--pad)));
+    height: fit-content; padding: 16px; }
+  .boot p { margin: 0; }
+  .boot-title { color: var(--ink); font-weight: 700; font-size: 16px; }
+  .boot-detail { margin-top: 4px; min-height: 1.45em; }
+  .boot-dots { display: flex; gap: 6px; margin-bottom: 12px; }
+  .boot-dots i { width: 10px; height: 10px; background: var(--line-strong); }
+  .boot[data-state="error"] .boot-title { color: var(--amber); }
+  .boot[data-state="error"] .boot-dots { display: none; }
+  .boot .btn { margin-top: 12px; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .boot-dots i { animation: boot 1.2s steps(1) infinite; }
+    .boot-dots i:nth-child(2) { animation-delay: 0.4s; }
+    .boot-dots i:nth-child(3) { animation-delay: 0.8s; }
+    @keyframes boot { 0%, 100% { background: var(--line-strong); } 33% { background: var(--accent); } }
+  }
   @media (prefers-reduced-motion: no-preference) {
     [data-status="driving"] .dot { animation: pulse 1.2s steps(2) infinite; }
     @keyframes pulse { 50% { opacity: 0.35; } }
@@ -264,6 +283,13 @@
     </div>
   </div>
 
+  <section class="boot notch" id="boot" role="status" hidden>
+    <div class="boot-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p class="boot-title" id="boot-title">Starting the simulation</p>
+    <p class="boot-detail" id="boot-detail"></p>
+    <button class="btn" id="boot-retry" type="button" hidden>Try again</button>
+  </section>
+
   <section class="drawer" id="drawer" aria-labelledby="drawer-title" hidden>
     <div class="drawer-head">
       <h2 id="drawer-title">Map settings</h2>
@@ -300,24 +326,26 @@
   </section>
 </div>
 
-<script>
-"use strict";
+<script type="module">
 // Where the data comes from. The page only talks to this object, so another source (for
 // example a simulation running in the browser) can replace it without touching the rest.
-const api = {
+const httpApi = {
+  ready: Promise.resolve(),
   async json(path, body) {
     const r = await fetch(path, body === undefined ? undefined :
       {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
     return r.json();
   },
-  mapInfo: () => api.json("/api/map.json"),
+  mapInfo: () => httpApi.json("/api/map.json"),
   mapImageUrl: (id) => "/api/map.png?id=" + id,
-  state: () => api.json("/api/state"),
-  goal: (x, y) => api.json("/api/goal", {x, y}),
-  newMap: (params) => api.json("/api/map", params),
-  control: (body) => api.json("/api/control", body),
+  state: () => httpApi.json("/api/state"),
+  goal: (x, y) => httpApi.json("/api/goal", {x, y}),
+  newMap: (params) => httpApi.json("/api/map", params),
+  control: (body) => httpApi.json("/api/control", body),
   frameUrl: () => "/api/frame.jpg?t=" + Date.now(),
 };
+// The browser build sets window.wormApi before this script runs.
+const api = window.wormApi || httpApi;
 
 // Colours match DESIGN.md. Amber marks refusals only.
 const C = {ground: "#07060f", ink: "#ece8ff", faint: "#8f86bd", accent: "#b79cff",
@@ -497,7 +525,10 @@ document.querySelectorAll("[data-speed]").forEach((b) => b.addEventListener("cli
 $("cam-toggle").addEventListener("click", () => {
   if (!camAvailable) return;
   camOn = !camOn;
-  if (camOn && !$("frame")) {
+  if (api.camera) {
+    // The data source draws its own view into the panel.
+    if (camOn) api.camera.mount($("cam")); else api.camera.unmount();
+  } else if (camOn && !$("frame")) {
     // Made on first use, so the page never carries an image with no source.
     const img = document.createElement("img");
     img.id = "frame"; img.alt = "Follow camera view of the worm";
@@ -506,6 +537,13 @@ $("cam-toggle").addEventListener("click", () => {
   $("cam-toggle").setAttribute("aria-pressed", String(camOn));
   $("cam").hidden = !camOn;
 });
+if (!api.camera && !api.frameUrl) disableCam("This source has no follow cam");
+function disableCam(reason) {
+  camAvailable = false; camOn = false; $("cam").hidden = true;
+  const button = $("cam-toggle");
+  button.setAttribute("aria-pressed", "false"); button.setAttribute("aria-disabled", "true");
+  button.title = reason;
+}
 
 const drawer = $("drawer"), drawerToggle = $("drawer-toggle");
 function setDrawer(open) {
@@ -541,6 +579,21 @@ $("new-map").addEventListener("click", async () => {
   }
 });
 
+// ---------- start-up ----------
+// A data source that takes time to start reports it through api.boot.
+function showBoot(boot) {
+  const panel = $("boot");
+  panel.hidden = boot.state === "ready";
+  panel.dataset.state = boot.state;
+  if (boot.state === "ready") { delete app.dataset.booting; return; }
+  app.dataset.booting = "";
+  $("boot-title").textContent = boot.state === "error" ? "The simulation could not start" : "Starting the simulation";
+  $("boot-detail").textContent = boot.message || "";
+  $("boot-retry").hidden = boot.state !== "error";
+}
+if (api.boot) api.boot.subscribe(showBoot);
+$("boot-retry").addEventListener("click", () => location.reload());
+
 // ---------- data ----------
 async function loadMap() {
   info = await api.mapInfo();
@@ -566,16 +619,14 @@ function showState(s) {
 
 let frameBusy = false;
 function refreshFrame() {
-  if (!camOn || frameBusy) return;
+  if (!camOn || frameBusy || api.camera) return;
   frameBusy = true;
   const img = $("frame");
   img.onload = () => { frameBusy = false; };
   img.onerror = () => {
     // No renderer on the server: switch the follow cam off and say so.
-    frameBusy = false; camAvailable = false; camOn = false; $("cam").hidden = true;
-    const button = $("cam-toggle");
-    button.setAttribute("aria-pressed", "false"); button.setAttribute("aria-disabled", "true");
-    button.title = "The follow cam is not available on this server";
+    frameBusy = false;
+    disableCam("The follow cam is not available on this server");
   };
   img.src = api.frameUrl();
 }
@@ -583,11 +634,13 @@ function refreshFrame() {
 let synced = false;
 async function poll() {
   try {
+    await api.ready;
     state = await api.state();
     if (!synced) { setPaused(!!state.paused); setSpeed(state.speed); synced = true; }
     if (state.map_id !== undefined && state.map_id !== lastMapId) await loadMap();
     showState(state); draw(); refreshFrame();
   } catch (e) {
+    if (api.boot && api.boot.state === "error") return; // the start-up panel explains it
     $("state-text").dataset.status = "offline"; $("state-label").textContent = "No connection";
   }
   setTimeout(poll, 100);

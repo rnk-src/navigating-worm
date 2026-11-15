@@ -113,8 +113,15 @@ class MjData:
         self._h = model._h
         d = model._dims
         nq, nv, nu, nb = d["nq"], d["nv"], d["nu"], d["nbody"]
-        self._sizes = [("qpos", (nq,)), ("qvel", (nv,)), ("ctrl", (nu,)), ("xpos", (nb, 3)),
-                       ("xmat", (nb, 9)), ("cvel", (nb, 6)), ("subtree_com", (nb, 3))]
+        self._sizes = [
+            ("qpos", (nq,)),
+            ("qvel", (nv,)),
+            ("ctrl", (nu,)),
+            ("xpos", (nb, 3)),
+            ("xmat", (nb, 9)),
+            ("cvel", (nb, 6)),
+            ("subtree_com", (nb, 3)),
+        ]
         for name, shape in self._sizes:
             setattr(self, name, np.zeros(shape))
         self.xfrc_applied = np.zeros((nb, 6))
