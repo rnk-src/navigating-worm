@@ -1,0 +1,3580 @@
+{
+  "policy": "terrain_v2_seed1",
+  "obs_version": 2,
+  "maps": 50,
+  "size": 10.0,
+  "seed": 2000,
+  "min_route": 5.0,
+  "overall": {
+    "routes": 150,
+    "successes": 147,
+    "success_rate": 0.98,
+    "replans_per_route": 0.06666666666666667,
+    "mean_sim_seconds": 53.22733333333335,
+    "per_class": {
+      "concrete": {
+        "seconds": 2155.1,
+        "time_share": 0.26992397389812256,
+        "mean_speed": 0.18129321145190483
+      },
+      "grass": {
+        "seconds": 3304.2,
+        "time_share": 0.41384752194987545,
+        "mean_speed": 0.12936323467102478
+      },
+      "sand": {
+        "seconds": 2524.8,
+        "time_share": 0.316228504152002,
+        "mean_speed": 0.10365613117870726
+      }
+    },
+    "failure_class": {
+      "concrete": 2,
+      "grass": 1
+    }
+  },
+  "levels": {
+    "1": {
+      "routes": 50,
+      "successes": 50,
+      "success_rate": 1.0,
+      "replans_per_route": 0.0,
+      "mean_sim_seconds": 47.749,
+      "per_class": {
+        "concrete": {
+          "seconds": 659.7,
+          "time_share": 0.27631992293032315,
+          "mean_speed": 0.19727906624223135
+        },
+        "grass": {
+          "seconds": 1006.95,
+          "time_share": 0.4217679951412595,
+          "mean_speed": 0.13885396494364172
+        },
+        "sand": {
+          "seconds": 720.8,
+          "time_share": 0.30191208192841734,
+          "mean_speed": 0.11148446170921197
+        }
+      },
+      "failure_class": {},
+      "infeasible_pairs": 0,
+      "skipped_maps": 0
+    },
+    "2": {
+      "routes": 50,
+      "successes": 50,
+      "success_rate": 1.0,
+      "replans_per_route": 0.02,
+      "mean_sim_seconds": 51.453999999999986,
+      "per_class": {
+        "concrete": {
+          "seconds": 720.65,
+          "time_share": 0.2801142768297898,
+          "mean_speed": 0.19293831957260796
+        },
+        "grass": {
+          "seconds": 1103.7,
+          "time_share": 0.42900454775138963,
+          "mean_speed": 0.1290703995650992
+        },
+        "sand": {
+          "seconds": 748.35,
+          "time_share": 0.2908811754188207,
+          "mean_speed": 0.10296786263112179
+        }
+      },
+      "failure_class": {},
+      "infeasible_pairs": 0,
+      "skipped_maps": 0
+    },
+    "3": {
+      "routes": 50,
+      "successes": 47,
+      "success_rate": 0.94,
+      "replans_per_route": 0.18,
+      "mean_sim_seconds": 60.479,
+      "per_class": {
+        "concrete": {
+          "seconds": 774.75,
+          "time_share": 0.256204633013112,
+          "mean_speed": 0.15684930622781543
+        },
+        "grass": {
+          "seconds": 1193.55,
+          "time_share": 0.3946989864250401,
+          "mean_speed": 0.12162707888232585
+        },
+        "sand": {
+          "seconds": 1055.65,
+          "time_share": 0.34909638056184794,
+          "mean_speed": 0.0987988443139298
+        }
+      },
+      "failure_class": {
+        "concrete": 2,
+        "grass": 1
+      },
+      "infeasible_pairs": 0,
+      "skipped_maps": 0
+    }
+  },
+  "routes": [
+    {
+      "level": 1,
+      "map_seed": 2000,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.22,
+      "sim_seconds": 40.0,
+      "replans": 0,
+      "class_seconds": [
+        20.4,
+        10.4,
+        9.2
+      ],
+      "class_metres": [
+        5.355,
+        1.624,
+        1.08
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2001,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.36,
+      "sim_seconds": 36.75,
+      "replans": 0,
+      "class_seconds": [
+        22.3,
+        14.45,
+        0.0
+      ],
+      "class_metres": [
+        3.832,
+        1.65,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2002,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.2,
+      "sim_seconds": 45.05,
+      "replans": 0,
+      "class_seconds": [
+        16.8,
+        4.05,
+        24.2
+      ],
+      "class_metres": [
+        3.362,
+        0.629,
+        2.977
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2003,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.0,
+      "sim_seconds": 38.6,
+      "replans": 0,
+      "class_seconds": [
+        13.45,
+        20.7,
+        4.45
+      ],
+      "class_metres": [
+        3.299,
+        3.207,
+        0.506
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2004,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.45,
+      "sim_seconds": 31.7,
+      "replans": 0,
+      "class_seconds": [
+        24.7,
+        7.0,
+        0.0
+      ],
+      "class_metres": [
+        5.663,
+        0.771,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2005,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.64,
+      "sim_seconds": 47.35,
+      "replans": 0,
+      "class_seconds": [
+        23.8,
+        21.55,
+        2.0
+      ],
+      "class_metres": [
+        6.367,
+        3.234,
+        0.197
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2006,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.23,
+      "sim_seconds": 39.2,
+      "replans": 0,
+      "class_seconds": [
+        15.05,
+        20.6,
+        3.55
+      ],
+      "class_metres": [
+        3.65,
+        3.151,
+        0.494
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2007,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.7,
+      "sim_seconds": 74.95,
+      "replans": 0,
+      "class_seconds": [
+        25.65,
+        46.4,
+        2.9
+      ],
+      "class_metres": [
+        4.518,
+        6.204,
+        0.537
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2008,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.18,
+      "sim_seconds": 43.8,
+      "replans": 0,
+      "class_seconds": [
+        15.1,
+        0.3,
+        28.4
+      ],
+      "class_metres": [
+        4.074,
+        0.0,
+        3.329
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2009,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.05,
+      "sim_seconds": 35.45,
+      "replans": 0,
+      "class_seconds": [
+        18.7,
+        16.75,
+        0.0
+      ],
+      "class_metres": [
+        3.85,
+        2.31,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2010,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.0,
+      "sim_seconds": 53.1,
+      "replans": 0,
+      "class_seconds": [
+        0.05,
+        13.45,
+        39.6
+      ],
+      "class_metres": [
+        0.0,
+        1.722,
+        4.103
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2011,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.86,
+      "sim_seconds": 71.9,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        34.8,
+        37.1
+      ],
+      "class_metres": [
+        0.0,
+        3.755,
+        3.57
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2012,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.01,
+      "sim_seconds": 63.0,
+      "replans": 0,
+      "class_seconds": [
+        31.4,
+        20.1,
+        11.5
+      ],
+      "class_metres": [
+        4.751,
+        2.571,
+        0.95
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2013,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.96,
+      "sim_seconds": 59.6,
+      "replans": 0,
+      "class_seconds": [
+        17.3,
+        19.1,
+        23.2
+      ],
+      "class_metres": [
+        2.295,
+        3.058,
+        2.325
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2014,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.06,
+      "sim_seconds": 67.5,
+      "replans": 0,
+      "class_seconds": [
+        5.45,
+        25.95,
+        36.1
+      ],
+      "class_metres": [
+        1.041,
+        4.14,
+        4.12
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2015,
+      "success": true,
+      "reason": "reached",
+      "distance": 10.17,
+      "sim_seconds": 68.35,
+      "replans": 0,
+      "class_seconds": [
+        10.3,
+        58.05,
+        0.0
+      ],
+      "class_metres": [
+        2.113,
+        8.305,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2016,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.23,
+      "sim_seconds": 38.05,
+      "replans": 0,
+      "class_seconds": [
+        24.95,
+        0.0,
+        13.1
+      ],
+      "class_metres": [
+        4.791,
+        0.0,
+        1.707
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2017,
+      "success": true,
+      "reason": "reached",
+      "distance": 11.1,
+      "sim_seconds": 84.5,
+      "replans": 0,
+      "class_seconds": [
+        18.25,
+        22.55,
+        43.7
+      ],
+      "class_metres": [
+        3.415,
+        3.784,
+        4.376
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2018,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.7,
+      "sim_seconds": 38.4,
+      "replans": 0,
+      "class_seconds": [
+        13.65,
+        4.6,
+        20.15
+      ],
+      "class_metres": [
+        2.682,
+        0.826,
+        2.387
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2019,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.03,
+      "sim_seconds": 48.5,
+      "replans": 0,
+      "class_seconds": [
+        10.95,
+        17.45,
+        20.1
+      ],
+      "class_metres": [
+        2.622,
+        2.574,
+        2.019
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2020,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.3,
+      "sim_seconds": 43.7,
+      "replans": 0,
+      "class_seconds": [
+        8.6,
+        19.8,
+        15.3
+      ],
+      "class_metres": [
+        2.077,
+        2.59,
+        1.799
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2021,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.83,
+      "sim_seconds": 56.05,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        35.95,
+        20.1
+      ],
+      "class_metres": [
+        0.0,
+        5.14,
+        1.918
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2022,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.65,
+      "sim_seconds": 41.5,
+      "replans": 0,
+      "class_seconds": [
+        10.65,
+        16.2,
+        14.65
+      ],
+      "class_metres": [
+        1.881,
+        2.741,
+        1.823
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2023,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.42,
+      "sim_seconds": 37.55,
+      "replans": 0,
+      "class_seconds": [
+        21.2,
+        0.9,
+        15.45
+      ],
+      "class_metres": [
+        4.601,
+        0.085,
+        1.74
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2024,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.72,
+      "sim_seconds": 34.8,
+      "replans": 0,
+      "class_seconds": [
+        0.9,
+        27.05,
+        6.85
+      ],
+      "class_metres": [
+        0.0,
+        4.747,
+        0.903
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2025,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.16,
+      "sim_seconds": 44.3,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        35.25,
+        9.05
+      ],
+      "class_metres": [
+        0.0,
+        4.555,
+        0.766
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2026,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.66,
+      "sim_seconds": 34.75,
+      "replans": 0,
+      "class_seconds": [
+        8.45,
+        19.95,
+        6.35
+      ],
+      "class_metres": [
+        1.686,
+        3.156,
+        0.745
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2027,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.64,
+      "sim_seconds": 50.2,
+      "replans": 0,
+      "class_seconds": [
+        33.3,
+        13.15,
+        3.75
+      ],
+      "class_metres": [
+        4.357,
+        1.326,
+        0.352
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2028,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.37,
+      "sim_seconds": 24.4,
+      "replans": 0,
+      "class_seconds": [
+        23.65,
+        0.75,
+        0.0
+      ],
+      "class_metres": [
+        5.156,
+        0.08,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2029,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.4,
+      "sim_seconds": 30.3,
+      "replans": 0,
+      "class_seconds": [
+        30.3,
+        0.0,
+        0.0
+      ],
+      "class_metres": [
+        5.486,
+        0.0,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2030,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.24,
+      "sim_seconds": 46.35,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        46.35,
+        0.0
+      ],
+      "class_metres": [
+        0.0,
+        5.439,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2031,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.8,
+      "sim_seconds": 34.9,
+      "replans": 0,
+      "class_seconds": [
+        10.1,
+        15.85,
+        8.95
+      ],
+      "class_metres": [
+        3.006,
+        2.274,
+        0.686
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2032,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.11,
+      "sim_seconds": 48.05,
+      "replans": 0,
+      "class_seconds": [
+        1.7,
+        45.7,
+        0.65
+      ],
+      "class_metres": [
+        0.135,
+        6.272,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2033,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.91,
+      "sim_seconds": 51.4,
+      "replans": 0,
+      "class_seconds": [
+        22.25,
+        17.6,
+        11.55
+      ],
+      "class_metres": [
+        3.132,
+        2.767,
+        1.181
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2034,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.26,
+      "sim_seconds": 41.95,
+      "replans": 0,
+      "class_seconds": [
+        9.35,
+        26.15,
+        6.45
+      ],
+      "class_metres": [
+        2.179,
+        5.223,
+        0.895
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2035,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.72,
+      "sim_seconds": 47.45,
+      "replans": 0,
+      "class_seconds": [
+        7.1,
+        23.1,
+        17.25
+      ],
+      "class_metres": [
+        1.518,
+        3.377,
+        2.389
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2036,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.61,
+      "sim_seconds": 34.25,
+      "replans": 0,
+      "class_seconds": [
+        20.05,
+        11.5,
+        2.7
+      ],
+      "class_metres": [
+        4.188,
+        2.018,
+        0.449
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2037,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.24,
+      "sim_seconds": 46.75,
+      "replans": 0,
+      "class_seconds": [
+        17.8,
+        16.75,
+        12.2
+      ],
+      "class_metres": [
+        2.389,
+        1.984,
+        1.101
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2038,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.98,
+      "sim_seconds": 41.95,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        26.55,
+        15.4
+      ],
+      "class_metres": [
+        0.0,
+        3.838,
+        2.21
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2039,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.78,
+      "sim_seconds": 56.85,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        43.1,
+        13.75
+      ],
+      "class_metres": [
+        0.0,
+        4.948,
+        1.185
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2040,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.32,
+      "sim_seconds": 69.35,
+      "replans": 0,
+      "class_seconds": [
+        7.0,
+        59.75,
+        2.6
+      ],
+      "class_metres": [
+        1.173,
+        6.141,
+        0.146
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2041,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.13,
+      "sim_seconds": 56.65,
+      "replans": 0,
+      "class_seconds": [
+        12.35,
+        22.05,
+        22.25
+      ],
+      "class_metres": [
+        1.972,
+        2.574,
+        2.706
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2042,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.72,
+      "sim_seconds": 53.95,
+      "replans": 0,
+      "class_seconds": [
+        17.1,
+        0.0,
+        36.85
+      ],
+      "class_metres": [
+        3.185,
+        0.0,
+        4.943
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2043,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.95,
+      "sim_seconds": 69.55,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        15.9,
+        53.65
+      ],
+      "class_metres": [
+        0.0,
+        2.529,
+        6.512
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2044,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.32,
+      "sim_seconds": 44.75,
+      "replans": 0,
+      "class_seconds": [
+        20.65,
+        9.05,
+        15.05
+      ],
+      "class_metres": [
+        3.404,
+        0.781,
+        1.372
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2045,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.04,
+      "sim_seconds": 47.0,
+      "replans": 0,
+      "class_seconds": [
+        9.05,
+        31.4,
+        6.55
+      ],
+      "class_metres": [
+        1.214,
+        4.382,
+        0.512
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2046,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.79,
+      "sim_seconds": 48.8,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        20.1,
+        28.7
+      ],
+      "class_metres": [
+        0.0,
+        2.686,
+        3.195
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2047,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.82,
+      "sim_seconds": 44.3,
+      "replans": 0,
+      "class_seconds": [
+        10.2,
+        17.55,
+        16.55
+      ],
+      "class_metres": [
+        2.998,
+        2.949,
+        2.081
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2048,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.19,
+      "sim_seconds": 38.45,
+      "replans": 0,
+      "class_seconds": [
+        26.2,
+        0.0,
+        12.25
+      ],
+      "class_metres": [
+        6.143,
+        0.0,
+        1.153
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 1,
+      "map_seed": 2049,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.0,
+      "sim_seconds": 41.45,
+      "replans": 0,
+      "class_seconds": [
+        3.5,
+        11.25,
+        26.7
+      ],
+      "class_metres": [
+        0.585,
+        1.702,
+        2.919
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2000,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.56,
+      "sim_seconds": 43.05,
+      "replans": 0,
+      "class_seconds": [
+        15.5,
+        0.0,
+        27.55
+      ],
+      "class_metres": [
+        4.236,
+        0.0,
+        3.529
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2001,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.36,
+      "sim_seconds": 53.0,
+      "replans": 0,
+      "class_seconds": [
+        32.15,
+        20.85,
+        0.0
+      ],
+      "class_metres": [
+        3.92,
+        1.968,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2002,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.59,
+      "sim_seconds": 44.75,
+      "replans": 0,
+      "class_seconds": [
+        9.7,
+        0.0,
+        35.05
+      ],
+      "class_metres": [
+        1.891,
+        0.0,
+        4.056
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2003,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.0,
+      "sim_seconds": 38.9,
+      "replans": 0,
+      "class_seconds": [
+        14.1,
+        21.0,
+        3.8
+      ],
+      "class_metres": [
+        3.487,
+        3.243,
+        0.335
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2004,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.45,
+      "sim_seconds": 30.75,
+      "replans": 0,
+      "class_seconds": [
+        24.65,
+        6.1,
+        0.0
+      ],
+      "class_metres": [
+        5.726,
+        0.73,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2005,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.98,
+      "sim_seconds": 43.7,
+      "replans": 0,
+      "class_seconds": [
+        23.75,
+        19.95,
+        0.0
+      ],
+      "class_metres": [
+        5.797,
+        3.127,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2006,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.23,
+      "sim_seconds": 39.45,
+      "replans": 0,
+      "class_seconds": [
+        14.35,
+        15.55,
+        9.55
+      ],
+      "class_metres": [
+        3.734,
+        2.438,
+        1.16
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2007,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.7,
+      "sim_seconds": 82.5,
+      "replans": 0,
+      "class_seconds": [
+        23.0,
+        56.45,
+        3.05
+      ],
+      "class_metres": [
+        4.857,
+        6.616,
+        0.386
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2008,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.93,
+      "sim_seconds": 36.3,
+      "replans": 0,
+      "class_seconds": [
+        13.65,
+        22.65,
+        0.0
+      ],
+      "class_metres": [
+        3.46,
+        2.692,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2009,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.05,
+      "sim_seconds": 37.15,
+      "replans": 0,
+      "class_seconds": [
+        18.75,
+        18.4,
+        0.0
+      ],
+      "class_metres": [
+        3.782,
+        2.385,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2010,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.0,
+      "sim_seconds": 46.15,
+      "replans": 0,
+      "class_seconds": [
+        8.85,
+        12.15,
+        25.15
+      ],
+      "class_metres": [
+        1.705,
+        1.615,
+        2.499
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2011,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.86,
+      "sim_seconds": 78.65,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        4.75,
+        73.9
+      ],
+      "class_metres": [
+        0.0,
+        0.502,
+        6.886
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2012,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.01,
+      "sim_seconds": 71.3,
+      "replans": 0,
+      "class_seconds": [
+        35.0,
+        19.95,
+        16.35
+      ],
+      "class_metres": [
+        4.929,
+        2.443,
+        1.34
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2013,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.14,
+      "sim_seconds": 79.75,
+      "replans": 1,
+      "class_seconds": [
+        24.85,
+        34.9,
+        20.0
+      ],
+      "class_metres": [
+        1.865,
+        4.665,
+        1.977
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2014,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.06,
+      "sim_seconds": 60.75,
+      "replans": 0,
+      "class_seconds": [
+        11.45,
+        34.9,
+        14.4
+      ],
+      "class_metres": [
+        2.668,
+        4.944,
+        1.739
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2015,
+      "success": true,
+      "reason": "reached",
+      "distance": 10.17,
+      "sim_seconds": 72.5,
+      "replans": 0,
+      "class_seconds": [
+        11.3,
+        61.2,
+        0.0
+      ],
+      "class_metres": [
+        2.314,
+        8.215,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2016,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.23,
+      "sim_seconds": 40.2,
+      "replans": 0,
+      "class_seconds": [
+        22.35,
+        0.0,
+        17.85
+      ],
+      "class_metres": [
+        4.735,
+        0.0,
+        2.014
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2017,
+      "success": true,
+      "reason": "reached",
+      "distance": 11.1,
+      "sim_seconds": 89.4,
+      "replans": 0,
+      "class_seconds": [
+        20.35,
+        22.2,
+        46.85
+      ],
+      "class_metres": [
+        3.453,
+        3.57,
+        4.633
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2018,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.7,
+      "sim_seconds": 35.35,
+      "replans": 0,
+      "class_seconds": [
+        14.4,
+        12.25,
+        8.7
+      ],
+      "class_metres": [
+        2.929,
+        2.357,
+        0.686
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2019,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.03,
+      "sim_seconds": 56.25,
+      "replans": 0,
+      "class_seconds": [
+        10.3,
+        19.65,
+        26.3
+      ],
+      "class_metres": [
+        2.597,
+        2.793,
+        1.961
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2020,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.3,
+      "sim_seconds": 41.85,
+      "replans": 0,
+      "class_seconds": [
+        7.65,
+        18.55,
+        15.65
+      ],
+      "class_metres": [
+        1.857,
+        2.711,
+        1.787
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2021,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.02,
+      "sim_seconds": 33.45,
+      "replans": 0,
+      "class_seconds": [
+        12.55,
+        8.35,
+        12.55
+      ],
+      "class_metres": [
+        2.999,
+        0.906,
+        1.18
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2022,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.65,
+      "sim_seconds": 41.15,
+      "replans": 0,
+      "class_seconds": [
+        13.75,
+        11.65,
+        15.75
+      ],
+      "class_metres": [
+        3.032,
+        1.917,
+        1.676
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2023,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.61,
+      "sim_seconds": 28.7,
+      "replans": 0,
+      "class_seconds": [
+        21.25,
+        0.0,
+        7.45
+      ],
+      "class_metres": [
+        4.826,
+        0.0,
+        0.835
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2024,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.72,
+      "sim_seconds": 33.85,
+      "replans": 0,
+      "class_seconds": [
+        1.15,
+        26.6,
+        6.1
+      ],
+      "class_metres": [
+        0.0,
+        4.869,
+        0.811
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2025,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.16,
+      "sim_seconds": 44.75,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        35.1,
+        9.65
+      ],
+      "class_metres": [
+        0.0,
+        4.544,
+        0.755
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2026,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.96,
+      "sim_seconds": 40.8,
+      "replans": 0,
+      "class_seconds": [
+        13.4,
+        18.1,
+        9.3
+      ],
+      "class_metres": [
+        2.512,
+        3.28,
+        1.03
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2027,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.46,
+      "sim_seconds": 84.9,
+      "replans": 0,
+      "class_seconds": [
+        6.0,
+        46.4,
+        32.5
+      ],
+      "class_metres": [
+        0.823,
+        4.116,
+        2.763
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2028,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.37,
+      "sim_seconds": 24.05,
+      "replans": 0,
+      "class_seconds": [
+        23.1,
+        0.95,
+        0.0
+      ],
+      "class_metres": [
+        5.34,
+        0.083,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2029,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.4,
+      "sim_seconds": 34.45,
+      "replans": 0,
+      "class_seconds": [
+        34.45,
+        0.0,
+        0.0
+      ],
+      "class_metres": [
+        5.455,
+        0.0,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2030,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.24,
+      "sim_seconds": 59.55,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        49.15,
+        10.4
+      ],
+      "class_metres": [
+        0.0,
+        5.027,
+        0.963
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2031,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.8,
+      "sim_seconds": 32.15,
+      "replans": 0,
+      "class_seconds": [
+        9.8,
+        21.85,
+        0.5
+      ],
+      "class_metres": [
+        3.03,
+        2.963,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2032,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.11,
+      "sim_seconds": 68.65,
+      "replans": 0,
+      "class_seconds": [
+        1.3,
+        49.7,
+        17.65
+      ],
+      "class_metres": [
+        0.0,
+        5.527,
+        1.361
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2033,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.93,
+      "sim_seconds": 50.0,
+      "replans": 0,
+      "class_seconds": [
+        20.6,
+        18.6,
+        10.8
+      ],
+      "class_metres": [
+        3.315,
+        2.888,
+        0.984
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2034,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.22,
+      "sim_seconds": 42.3,
+      "replans": 0,
+      "class_seconds": [
+        8.1,
+        25.15,
+        9.05
+      ],
+      "class_metres": [
+        2.135,
+        5.303,
+        1.123
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2035,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.72,
+      "sim_seconds": 52.05,
+      "replans": 0,
+      "class_seconds": [
+        7.4,
+        30.1,
+        14.55
+      ],
+      "class_metres": [
+        1.413,
+        4.402,
+        1.872
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2036,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.36,
+      "sim_seconds": 34.65,
+      "replans": 0,
+      "class_seconds": [
+        34.65,
+        0.0,
+        0.0
+      ],
+      "class_metres": [
+        6.475,
+        0.0,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2037,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.24,
+      "sim_seconds": 65.3,
+      "replans": 0,
+      "class_seconds": [
+        32.3,
+        18.0,
+        15.0
+      ],
+      "class_metres": [
+        2.583,
+        2.144,
+        1.069
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2038,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.98,
+      "sim_seconds": 43.75,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        28.8,
+        14.95
+      ],
+      "class_metres": [
+        0.0,
+        3.903,
+        2.254
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2039,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.78,
+      "sim_seconds": 56.3,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        43.55,
+        12.75
+      ],
+      "class_metres": [
+        0.0,
+        5.032,
+        1.238
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2040,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.32,
+      "sim_seconds": 93.1,
+      "replans": 0,
+      "class_seconds": [
+        5.5,
+        82.05,
+        5.55
+      ],
+      "class_metres": [
+        1.164,
+        6.341,
+        0.462
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2041,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.13,
+      "sim_seconds": 64.1,
+      "replans": 0,
+      "class_seconds": [
+        13.7,
+        27.3,
+        23.1
+      ],
+      "class_metres": [
+        1.829,
+        3.012,
+        2.581
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2042,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.72,
+      "sim_seconds": 62.25,
+      "replans": 0,
+      "class_seconds": [
+        18.45,
+        0.0,
+        43.8
+      ],
+      "class_metres": [
+        3.223,
+        0.0,
+        5.272
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2043,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.95,
+      "sim_seconds": 74.8,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        16.7,
+        58.1
+      ],
+      "class_metres": [
+        0.0,
+        2.589,
+        6.468
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2044,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.98,
+      "sim_seconds": 61.3,
+      "replans": 0,
+      "class_seconds": [
+        30.55,
+        28.85,
+        1.9
+      ],
+      "class_metres": [
+        5.145,
+        2.656,
+        0.249
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2045,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.04,
+      "sim_seconds": 46.7,
+      "replans": 0,
+      "class_seconds": [
+        8.9,
+        31.3,
+        6.5
+      ],
+      "class_metres": [
+        1.256,
+        4.272,
+        0.573
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2046,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.8,
+      "sim_seconds": 46.7,
+      "replans": 0,
+      "class_seconds": [
+        11.45,
+        35.25,
+        0.0
+      ],
+      "class_metres": [
+        2.874,
+        5.024,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2047,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.82,
+      "sim_seconds": 49.2,
+      "replans": 0,
+      "class_seconds": [
+        9.6,
+        17.1,
+        22.5
+      ],
+      "class_metres": [
+        3.017,
+        2.841,
+        2.252
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2048,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.19,
+      "sim_seconds": 34.85,
+      "replans": 0,
+      "class_seconds": [
+        24.1,
+        0.0,
+        10.75
+      ],
+      "class_metres": [
+        6.078,
+        0.0,
+        1.111
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 2,
+      "map_seed": 2049,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.0,
+      "sim_seconds": 47.2,
+      "replans": 0,
+      "class_seconds": [
+        2.5,
+        11.65,
+        33.05
+      ],
+      "class_metres": [
+        0.575,
+        1.802,
+        3.186
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2000,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.16,
+      "sim_seconds": 19.3,
+      "replans": 0,
+      "class_seconds": [
+        17.95,
+        0.0,
+        1.35
+      ],
+      "class_metres": [
+        4.934,
+        0.0,
+        0.223
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2001,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.51,
+      "sim_seconds": 66.45,
+      "replans": 0,
+      "class_seconds": [
+        49.5,
+        10.7,
+        6.25
+      ],
+      "class_metres": [
+        7.878,
+        0.986,
+        0.555
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2002,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.46,
+      "sim_seconds": 35.7,
+      "replans": 0,
+      "class_seconds": [
+        7.95,
+        27.75,
+        0.0
+      ],
+      "class_metres": [
+        1.071,
+        4.439,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2003,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.32,
+      "sim_seconds": 28.1,
+      "replans": 0,
+      "class_seconds": [
+        19.35,
+        8.2,
+        0.55
+      ],
+      "class_metres": [
+        4.494,
+        1.082,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2004,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.74,
+      "sim_seconds": 68.4,
+      "replans": 0,
+      "class_seconds": [
+        24.7,
+        31.7,
+        12.0
+      ],
+      "class_metres": [
+        4.84,
+        2.209,
+        0.982
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2005,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.87,
+      "sim_seconds": 36.75,
+      "replans": 0,
+      "class_seconds": [
+        13.25,
+        23.5,
+        0.0
+      ],
+      "class_metres": [
+        3.586,
+        3.449,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2006,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.05,
+      "sim_seconds": 41.1,
+      "replans": 0,
+      "class_seconds": [
+        18.55,
+        8.2,
+        14.35
+      ],
+      "class_metres": [
+        5.016,
+        1.311,
+        1.85
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2007,
+      "success": false,
+      "reason": "flipped",
+      "distance": 5.94,
+      "sim_seconds": 39.55,
+      "replans": 0,
+      "class_seconds": [
+        8.2,
+        0.0,
+        31.35
+      ],
+      "class_metres": [
+        1.664,
+        0.0,
+        3.81
+      ],
+      "failure_class": "concrete"
+    },
+    {
+      "level": 3,
+      "map_seed": 2008,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.65,
+      "sim_seconds": 36.2,
+      "replans": 0,
+      "class_seconds": [
+        19.15,
+        0.0,
+        17.05
+      ],
+      "class_metres": [
+        4.888,
+        0.0,
+        2.098
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2009,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.0,
+      "sim_seconds": 57.55,
+      "replans": 0,
+      "class_seconds": [
+        14.2,
+        23.6,
+        19.75
+      ],
+      "class_metres": [
+        2.969,
+        3.038,
+        1.587
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2010,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.1,
+      "sim_seconds": 76.5,
+      "replans": 2,
+      "class_seconds": [
+        2.4,
+        11.4,
+        62.7
+      ],
+      "class_metres": [
+        0.309,
+        1.58,
+        5.04
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2011,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.26,
+      "sim_seconds": 82.5,
+      "replans": 0,
+      "class_seconds": [
+        49.35,
+        0.0,
+        33.15
+      ],
+      "class_metres": [
+        6.004,
+        0.0,
+        3.54
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2012,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.51,
+      "sim_seconds": 61.25,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        24.95,
+        36.3
+      ],
+      "class_metres": [
+        0.0,
+        3.15,
+        2.907
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2013,
+      "success": false,
+      "reason": "stuck",
+      "distance": 7.63,
+      "sim_seconds": 94.2,
+      "replans": 5,
+      "class_seconds": [
+        79.4,
+        0.0,
+        14.8
+      ],
+      "class_metres": [
+        4.849,
+        0.0,
+        1.389
+      ],
+      "failure_class": "concrete"
+    },
+    {
+      "level": 3,
+      "map_seed": 2014,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.46,
+      "sim_seconds": 56.55,
+      "replans": 0,
+      "class_seconds": [
+        5.85,
+        13.95,
+        36.75
+      ],
+      "class_metres": [
+        1.243,
+        1.982,
+        3.647
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2015,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.12,
+      "sim_seconds": 65.05,
+      "replans": 0,
+      "class_seconds": [
+        9.3,
+        55.75,
+        0.0
+      ],
+      "class_metres": [
+        1.801,
+        7.211,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2016,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.16,
+      "sim_seconds": 63.1,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        59.95,
+        3.15
+      ],
+      "class_metres": [
+        0.0,
+        6.187,
+        0.263
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2017,
+      "success": true,
+      "reason": "reached",
+      "distance": 10.42,
+      "sim_seconds": 89.55,
+      "replans": 0,
+      "class_seconds": [
+        19.15,
+        23.55,
+        46.85
+      ],
+      "class_metres": [
+        2.554,
+        3.664,
+        4.791
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2018,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.68,
+      "sim_seconds": 39.8,
+      "replans": 0,
+      "class_seconds": [
+        18.6,
+        5.6,
+        15.6
+      ],
+      "class_metres": [
+        3.633,
+        0.915,
+        1.413
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2019,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.48,
+      "sim_seconds": 44.6,
+      "replans": 0,
+      "class_seconds": [
+        18.0,
+        26.6,
+        0.0
+      ],
+      "class_metres": [
+        3.575,
+        3.439,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2020,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.44,
+      "sim_seconds": 56.8,
+      "replans": 0,
+      "class_seconds": [
+        11.95,
+        26.75,
+        18.1
+      ],
+      "class_metres": [
+        3.18,
+        3.933,
+        1.535
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2021,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.03,
+      "sim_seconds": 49.9,
+      "replans": 0,
+      "class_seconds": [
+        15.3,
+        12.75,
+        21.85
+      ],
+      "class_metres": [
+        3.282,
+        2.079,
+        1.941
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2022,
+      "success": false,
+      "reason": "out_of_world",
+      "distance": 6.41,
+      "sim_seconds": 3.85,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        3.85,
+        0.0
+      ],
+      "class_metres": [
+        0.0,
+        0.237,
+        0.0
+      ],
+      "failure_class": "grass"
+    },
+    {
+      "level": 3,
+      "map_seed": 2023,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.43,
+      "sim_seconds": 64.9,
+      "replans": 0,
+      "class_seconds": [
+        25.85,
+        0.0,
+        39.05
+      ],
+      "class_metres": [
+        5.433,
+        0.0,
+        4.165
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2024,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.28,
+      "sim_seconds": 32.25,
+      "replans": 0,
+      "class_seconds": [
+        15.85,
+        0.0,
+        16.4
+      ],
+      "class_metres": [
+        4.11,
+        0.0,
+        2.225
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2025,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.12,
+      "sim_seconds": 58.45,
+      "replans": 0,
+      "class_seconds": [
+        12.85,
+        42.4,
+        3.2
+      ],
+      "class_metres": [
+        2.954,
+        4.213,
+        0.313
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2026,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.12,
+      "sim_seconds": 45.95,
+      "replans": 0,
+      "class_seconds": [
+        24.75,
+        14.1,
+        7.1
+      ],
+      "class_metres": [
+        3.465,
+        2.203,
+        0.739
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2027,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.38,
+      "sim_seconds": 91.15,
+      "replans": 0,
+      "class_seconds": [
+        20.4,
+        46.75,
+        24.0
+      ],
+      "class_metres": [
+        1.682,
+        3.739,
+        2.06
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2028,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.55,
+      "sim_seconds": 79.5,
+      "replans": 0,
+      "class_seconds": [
+        7.3,
+        19.45,
+        52.75
+      ],
+      "class_metres": [
+        1.529,
+        2.333,
+        4.247
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2029,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.0,
+      "sim_seconds": 47.25,
+      "replans": 0,
+      "class_seconds": [
+        13.35,
+        15.55,
+        18.35
+      ],
+      "class_metres": [
+        2.479,
+        2.537,
+        2.17
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2030,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.5,
+      "sim_seconds": 88.8,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        78.95,
+        9.85
+      ],
+      "class_metres": [
+        0.0,
+        7.589,
+        0.854
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2031,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.04,
+      "sim_seconds": 27.35,
+      "replans": 0,
+      "class_seconds": [
+        13.8,
+        13.55,
+        0.0
+      ],
+      "class_metres": [
+        3.733,
+        1.514,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2032,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.06,
+      "sim_seconds": 52.5,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        52.5,
+        0.0
+      ],
+      "class_metres": [
+        0.0,
+        5.563,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2033,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.23,
+      "sim_seconds": 78.8,
+      "replans": 1,
+      "class_seconds": [
+        0.0,
+        32.15,
+        46.65
+      ],
+      "class_metres": [
+        0.0,
+        4.842,
+        3.746
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2034,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.59,
+      "sim_seconds": 85.1,
+      "replans": 0,
+      "class_seconds": [
+        3.35,
+        13.4,
+        68.35
+      ],
+      "class_metres": [
+        0.448,
+        2.713,
+        7.305
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2035,
+      "success": true,
+      "reason": "reached",
+      "distance": 8.1,
+      "sim_seconds": 71.05,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        32.5,
+        38.55
+      ],
+      "class_metres": [
+        0.0,
+        3.661,
+        5.127
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2036,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.51,
+      "sim_seconds": 70.75,
+      "replans": 0,
+      "class_seconds": [
+        44.9,
+        17.35,
+        8.5
+      ],
+      "class_metres": [
+        4.41,
+        2.959,
+        0.789
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2037,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.71,
+      "sim_seconds": 81.15,
+      "replans": 0,
+      "class_seconds": [
+        37.25,
+        27.75,
+        16.15
+      ],
+      "class_metres": [
+        2.486,
+        3.171,
+        1.093
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2038,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.57,
+      "sim_seconds": 69.2,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        59.75,
+        9.45
+      ],
+      "class_metres": [
+        0.0,
+        7.182,
+        1.464
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2039,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.38,
+      "sim_seconds": 45.9,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        32.65,
+        13.25
+      ],
+      "class_metres": [
+        0.0,
+        4.549,
+        0.984
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2040,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.93,
+      "sim_seconds": 98.9,
+      "replans": 0,
+      "class_seconds": [
+        5.1,
+        93.8,
+        0.0
+      ],
+      "class_metres": [
+        1.002,
+        7.796,
+        0.0
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2041,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.1,
+      "sim_seconds": 88.0,
+      "replans": 0,
+      "class_seconds": [
+        12.2,
+        41.3,
+        34.5
+      ],
+      "class_metres": [
+        1.372,
+        4.922,
+        3.783
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2042,
+      "success": true,
+      "reason": "reached",
+      "distance": 9.01,
+      "sim_seconds": 85.4,
+      "replans": 0,
+      "class_seconds": [
+        9.1,
+        23.55,
+        52.75
+      ],
+      "class_metres": [
+        2.007,
+        2.931,
+        5.611
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2043,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.55,
+      "sim_seconds": 71.75,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        28.05,
+        43.7
+      ],
+      "class_metres": [
+        0.0,
+        4.688,
+        4.478
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2044,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.22,
+      "sim_seconds": 95.5,
+      "replans": 1,
+      "class_seconds": [
+        54.05,
+        5.3,
+        36.15
+      ],
+      "class_metres": [
+        5.379,
+        0.267,
+        3.27
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2045,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.33,
+      "sim_seconds": 65.8,
+      "replans": 0,
+      "class_seconds": [
+        4.3,
+        32.6,
+        28.9
+      ],
+      "class_metres": [
+        0.569,
+        4.624,
+        2.14
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2046,
+      "success": true,
+      "reason": "reached",
+      "distance": 6.38,
+      "sim_seconds": 60.6,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        22.65,
+        37.95
+      ],
+      "class_metres": [
+        0.0,
+        2.708,
+        4.18
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2047,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.1,
+      "sim_seconds": 42.6,
+      "replans": 0,
+      "class_seconds": [
+        0.0,
+        17.9,
+        24.7
+      ],
+      "class_metres": [
+        0.0,
+        3.42,
+        2.256
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2048,
+      "success": true,
+      "reason": "reached",
+      "distance": 7.94,
+      "sim_seconds": 63.65,
+      "replans": 0,
+      "class_seconds": [
+        23.25,
+        6.9,
+        33.5
+      ],
+      "class_metres": [
+        3.872,
+        0.787,
+        3.727
+      ],
+      "failure_class": null
+    },
+    {
+      "level": 3,
+      "map_seed": 2049,
+      "success": true,
+      "reason": "reached",
+      "distance": 5.75,
+      "sim_seconds": 48.95,
+      "replans": 0,
+      "class_seconds": [
+        25.0,
+        23.95,
+        0.0
+      ],
+      "class_metres": [
+        2.819,
+        3.366,
+        0.0
+      ],
+      "failure_class": null
+    }
+  ],
+  "flat_routes": {
+    "successes": 49,
+    "runs_total": 50,
+    "runs": [
+      {
+        "run": 0,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 508.9,
+        "mu_forward": 0.438,
+        "mu_lateral": 1.338
+      },
+      {
+        "run": 1,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1231.1,
+        "mu_forward": 0.762,
+        "mu_lateral": 1.787
+      },
+      {
+        "run": 2,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1483.7,
+        "mu_forward": 0.588,
+        "mu_lateral": 1.549
+      },
+      {
+        "run": 3,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 962.9,
+        "mu_forward": 0.592,
+        "mu_lateral": 1.865
+      },
+      {
+        "run": 4,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1971.6,
+        "mu_forward": 0.431,
+        "mu_lateral": 0.942
+      },
+      {
+        "run": 5,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 392.6,
+        "mu_forward": 0.323,
+        "mu_lateral": 1.637
+      },
+      {
+        "run": 6,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 502.6,
+        "mu_forward": 0.356,
+        "mu_lateral": 1.292
+      },
+      {
+        "run": 7,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 729.9,
+        "mu_forward": 0.323,
+        "mu_lateral": 0.888
+      },
+      {
+        "run": 8,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 374.7,
+        "mu_forward": 0.445,
+        "mu_lateral": 2.018
+      },
+      {
+        "run": 9,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1759.8,
+        "mu_forward": 0.693,
+        "mu_lateral": 1.49
+      },
+      {
+        "run": 10,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 851.9,
+        "mu_forward": 0.407,
+        "mu_lateral": 1.361
+      },
+      {
+        "run": 11,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 396.1,
+        "mu_forward": 0.197,
+        "mu_lateral": 1.074
+      },
+      {
+        "run": 12,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 442.1,
+        "mu_forward": 0.272,
+        "mu_lateral": 1.144
+      },
+      {
+        "run": 13,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 820.6,
+        "mu_forward": 0.578,
+        "mu_lateral": 1.494
+      },
+      {
+        "run": 14,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 662.6,
+        "mu_forward": 0.352,
+        "mu_lateral": 1.019
+      },
+      {
+        "run": 15,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 974.8,
+        "mu_forward": 0.553,
+        "mu_lateral": 1.412
+      },
+      {
+        "run": 16,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 487.2,
+        "mu_forward": 0.511,
+        "mu_lateral": 2.013
+      },
+      {
+        "run": 17,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 432.8,
+        "mu_forward": 0.152,
+        "mu_lateral": 0.625
+      },
+      {
+        "run": 18,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1829.1,
+        "mu_forward": 0.459,
+        "mu_lateral": 0.93
+      },
+      {
+        "run": 19,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 398.3,
+        "mu_forward": 0.157,
+        "mu_lateral": 0.853
+      },
+      {
+        "run": 20,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 334.3,
+        "mu_forward": 0.305,
+        "mu_lateral": 1.608
+      },
+      {
+        "run": 21,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 416.5,
+        "mu_forward": 0.317,
+        "mu_lateral": 1.297
+      },
+      {
+        "run": 22,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 814.1,
+        "mu_forward": 0.528,
+        "mu_lateral": 1.454
+      },
+      {
+        "run": 23,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 453.5,
+        "mu_forward": 0.543,
+        "mu_lateral": 1.816
+      },
+      {
+        "run": 24,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 827.4,
+        "mu_forward": 0.402,
+        "mu_lateral": 1.019
+      },
+      {
+        "run": 25,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 537.1,
+        "mu_forward": 0.313,
+        "mu_lateral": 0.999
+      },
+      {
+        "run": 26,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 381.3,
+        "mu_forward": 0.32,
+        "mu_lateral": 1.361
+      },
+      {
+        "run": 27,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 329.9,
+        "mu_forward": 0.292,
+        "mu_lateral": 1.611
+      },
+      {
+        "run": 28,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 495.2,
+        "mu_forward": 0.212,
+        "mu_lateral": 0.8
+      },
+      {
+        "run": 29,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 426.4,
+        "mu_forward": 0.556,
+        "mu_lateral": 2.115
+      },
+      {
+        "run": 30,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 2089.5,
+        "mu_forward": 0.481,
+        "mu_lateral": 1.06
+      },
+      {
+        "run": 31,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 455.7,
+        "mu_forward": 0.578,
+        "mu_lateral": 2.02
+      },
+      {
+        "run": 32,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1781.6,
+        "mu_forward": 0.479,
+        "mu_lateral": 1.063
+      },
+      {
+        "run": 33,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 426.2,
+        "mu_forward": 0.184,
+        "mu_lateral": 0.914
+      },
+      {
+        "run": 34,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 560.2,
+        "mu_forward": 0.173,
+        "mu_lateral": 0.568
+      },
+      {
+        "run": 35,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 528.2,
+        "mu_forward": 0.401,
+        "mu_lateral": 1.675
+      },
+      {
+        "run": 36,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1526.4,
+        "mu_forward": 0.62,
+        "mu_lateral": 1.415
+      },
+      {
+        "run": 37,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 324.0,
+        "mu_forward": 0.375,
+        "mu_lateral": 2.116
+      },
+      {
+        "run": 38,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 567.2,
+        "mu_forward": 0.474,
+        "mu_lateral": 1.463
+      },
+      {
+        "run": 39,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 372.9,
+        "mu_forward": 0.292,
+        "mu_lateral": 1.225
+      },
+      {
+        "run": 40,
+        "success": false,
+        "reached": 46,
+        "total": 50,
+        "sim_seconds": 2745.8,
+        "mu_forward": 0.512,
+        "mu_lateral": 1.056
+      },
+      {
+        "run": 41,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 549.6,
+        "mu_forward": 0.588,
+        "mu_lateral": 2.036
+      },
+      {
+        "run": 42,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1104.8,
+        "mu_forward": 0.497,
+        "mu_lateral": 1.33
+      },
+      {
+        "run": 43,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 436.7,
+        "mu_forward": 0.253,
+        "mu_lateral": 0.889
+      },
+      {
+        "run": 44,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 776.4,
+        "mu_forward": 0.16,
+        "mu_lateral": 0.615
+      },
+      {
+        "run": 45,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 409.9,
+        "mu_forward": 0.175,
+        "mu_lateral": 0.925
+      },
+      {
+        "run": 46,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 495.0,
+        "mu_forward": 0.154,
+        "mu_lateral": 0.719
+      },
+      {
+        "run": 47,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 760.9,
+        "mu_forward": 0.21,
+        "mu_lateral": 0.633
+      },
+      {
+        "run": 48,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 991.5,
+        "mu_forward": 0.649,
+        "mu_lateral": 1.509
+      },
+      {
+        "run": 49,
+        "success": true,
+        "reached": 50,
+        "total": 50,
+        "sim_seconds": 1006.5,
+        "mu_forward": 0.366,
+        "mu_lateral": 1.009
+      }
+    ]
+  }
+}
