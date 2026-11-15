@@ -186,3 +186,34 @@ def test_nav_eval_runs_during_training_and_lands_in_progress(tmp_path: Path) -> 
     assert nav["steps"] == 512 and nav["level"] >= 1
     assert 0.0 <= nav["nav_success"] <= 1.0
     assert set(nav["speed"]) == {"concrete", "grass", "sand"}
+
+
+def test_ctrl_c_on_the_process_group_saves_a_checkpoint_with_env_workers(tmp_path: Path) -> None:
+    out = tmp_path / "run"
+    process = subprocess.Popen(
+        [sys.executable, "scripts/train.py", "--config", str(CONFIGS / "terrain_v2_smoke.toml")]
+        + ["--steps", "2000000", "--n-envs", "2", "--out", str(out)],
+        cwd=ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,  # its own group: the trainer and its env workers
+        env={**os.environ, "PYTHONUNBUFFERED": "1"},
+    )
+    try:
+        deadline = time.monotonic() + 120.0
+        while not list(out.glob("checkpoints/step_*.zip")):
+            assert process.poll() is None, process.stderr.read().decode()  # type: ignore[union-attr]
+            assert time.monotonic() < deadline, "no checkpoint within 120 s"
+            time.sleep(0.2)
+        os.killpg(process.pid, signal.SIGINT)  # what Ctrl-C in a terminal does
+        code = process.wait(timeout=60)
+        assert code == 0, process.stderr.read().decode()  # type: ignore[union-attr]
+    finally:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    state = progress(out)
+    assert state["done"] is False
+    assert state["last_checkpoint"] == f"step_{state['steps']}"
+    assert (out / "checkpoints" / f"{state['last_checkpoint']}.zip").exists()
