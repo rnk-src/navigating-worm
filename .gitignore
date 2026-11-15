@@ -19,3 +19,6 @@ docs/
 web/node_modules/
 web/dist/
 web/public/
+web/public/
+web/index.html
+web/.wheel-*/
