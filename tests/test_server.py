@@ -201,3 +201,18 @@ def test_a_cross_origin_post_is_refused(client: Client) -> None:
     assert post({"Host": "evil.example:8765"}) == 403  # DNS rebinding
     assert post({"Origin": client.base}) == 200
     assert post({}) == 200
+
+
+def test_fonts_are_served_from_a_fixed_list_only(client: Client) -> None:
+    for name in ("atkinson-hyperlegible-400.woff2", "atkinson-hyperlegible-700.woff2"):
+        status, kind, body = client.get(f"/fonts/{name}")
+        assert (status, kind) == (200, "font/woff2")
+        assert body[:4] == b"wOF2"
+    for path in (
+        "/fonts/missing.woff2",
+        "/fonts/../server.py",
+        "/fonts/%2e%2e/server.py",
+        "/fonts/",
+        "/static/index.html",
+    ):
+        assert client.get(path)[0] == 404, path
