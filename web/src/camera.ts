@@ -6,8 +6,8 @@ import { followPose, heading, smoothAngle, smoothPoint, terrainGrid } from './ca
 import type { Engine } from './engine';
 
 // The camera eases toward the worm slowly, so the body's wiggle does not shake the view.
-const BACK_M = 0.7;
-const UP_M = 0.45;
+const BACK_M = 0.5;
+const UP_M = 0.35;
 const TURN_TAU_S = 1.4;
 const MOVE_TAU_S = 0.5;
 const GOAL_REFRESH_MS = 250;
