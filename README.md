@@ -82,7 +82,7 @@ With the committed policy, the navigator reached 10 of 10 goals on ten generated
 uv run python scripts/demo.py --open
 ```
 
-The page shows a top-down map. Click a point and the worm plans a route and drives it. A click on a rock shows why the goal is refused. A click while the worm drives re-routes it. The sliders make a new map, change the speed and pause the run. Use `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
+The page shows a top-down map. Click a point and the worm plans a route and drives it. A click on a rock shows why the goal is refused. A click while the worm drives re-routes it. The sliders make a new map, change the speed and pause the run. The demo drives the terrain policy in `results/policy_terrain` by default. Use `--policy results/policy` for the flat policy, `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
 
 ## Train the terrain policy
 The terrain policy takes observation v2: the 24 inputs of v1 plus the terrain class 0.25 m ahead (3) and four ground heights ahead of the head (4), 31 in total. Both additions model real sensors, with classifier errors and range noise. It trains on a curriculum of 8 m worlds: level ground of one class, then mixed surfaces, then hills and roughness, then steeper hills with shallow ditches and rocks. No rock sits on the line to the target, because the planner owns obstacle avoidance. Each saved run has a `meta.json` with its observation version, so old policies keep loading.
@@ -150,7 +150,6 @@ Notes:
 - Seeds 1 and 2 pass the same gate. Seed 1 gains only 2 points on level 3 and passes by sand speed (39 % faster).
 - All three seeds, and the flat policy, fail the route on world 2013 of level 3.
 - Each terrain policy lost one flat 100 m route that the flat policy completes.
-- The click-to-go demo still accepts only observation v1, so it drives the flat policy.
 - The tables are in `results/terrain_eval_seed{0,1,2}.json` and `results/terrain_eval_baseline_v1.json`.
 
 ## Roadmap

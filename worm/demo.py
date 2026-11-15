@@ -17,7 +17,7 @@ from worm.controllers import Policy, bearing_steer
 from worm.env import WormGoalEnv
 from worm.navigate import NavConfig, Navigator
 from worm.sensors import head_pose
-from worm.spec import WormSpec, obs_layout
+from worm.spec import LATEST_OBS_VERSION, WormSpec, obs_layout
 from worm.world import World, WorldConfig, generate
 
 META_FILE = "meta.json"
@@ -159,7 +159,7 @@ class DemoSession:
     """
 
     def __init__(self, controller: Controller, render: bool = False) -> None:
-        if controller.obs_version != 1:
+        if not 1 <= controller.obs_version <= LATEST_OBS_VERSION:
             raise ValueError(f"observation version {controller.obs_version} is not supported")
         self._controller = controller
         self._render = render
@@ -200,6 +200,7 @@ class DemoSession:
             world=world,
             episode_seconds=NavConfig().waypoint_timeout,
             render_mode="rgb_array" if self._render else None,
+            obs_version=self._controller.obs_version,  # the policy decides its input
         )
         try:
             env.reset(seed=req.seed, options={"start": (0.0, 0.0)})
