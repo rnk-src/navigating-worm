@@ -1,0 +1,25 @@
+# The M1 flat-ground policy: obs v1 on the plane, one terrain class per episode.
+
+[run]
+name = "m1_flat"
+steps = 3_000_000
+n_envs = 8
+seed = 0
+
+[env]
+obs_version = 1
+world = "flat"
+randomizer_level = 1.0
+
+[ppo]
+n_steps = 1024
+batch_size = 1024
+n_epochs = 10
+gamma = 0.99
+learning_rate = 3e-4
+net_arch = [64, 64]
+log_std_init = -1.0
+
+[checkpoint]
+every_steps = 1_000_000
+keep = 3

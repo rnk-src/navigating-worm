@@ -8,15 +8,13 @@ from __future__ import annotations
 
 import argparse
 import math
-from pathlib import Path
 
 import numpy as np
 
 from worm import world as wd
-from worm.controllers import bearing_steer
+from worm.cli import policy_from_arg
 from worm.env import WormGoalEnv
 from worm.terrain import TerrainClass
-from worm.training import load_policy
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
@@ -27,12 +25,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     speeds = {}
+    policy, obs_version = policy_from_arg(args.policy)
     for cls in TerrainClass:
-        env = WormGoalEnv(world=wd.flat((6.0, 6.0), cls=cls), episode_seconds=90.0)
-        policy = (
-            bearing_steer(env.layout)
-            if args.policy == "scripted"
-            else load_policy(Path(args.policy))
+        env = WormGoalEnv(
+            world=wd.flat((6.0, 6.0), cls=cls), episode_seconds=90.0, obs_version=obs_version
         )
         covered, seconds = 0.0, 0.0
         for k in range(args.targets):

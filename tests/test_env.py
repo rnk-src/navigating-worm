@@ -402,7 +402,7 @@ def test_flat_env_reports_the_episode_class_under_the_head() -> None:
 
 
 def test_world_sampler_gives_a_new_world_each_reset_without_recompiling() -> None:
-    def sampler(rng: np.random.Generator) -> wd.World:
+    def sampler(rng: np.random.Generator, start: np.ndarray, target: np.ndarray) -> wd.World:
         return hilly_world(int(rng.integers(1_000_000)))
 
     env = WormGoalEnv(world=sampler)
