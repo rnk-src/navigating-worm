@@ -3,180 +3,593 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
 <title>Navigating Worm</title>
 <style>
-  :root { --bg:#f4f4f2; --fg:#1d1d1f; --panel:#fff; --line:#d0d0cc; --accent:#1e5aff; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#1b1b1d; --fg:#ececec; --panel:#26262a; --line:#3a3a40; --accent:#6c93ff; }
+  /* Type: Atkinson Hyperlegible only, in a fixed scale. The files are relative so the page
+     works from any folder. */
+  @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-display: swap;
+               src: url(fonts/atkinson-hyperlegible-400.woff2) format("woff2"); }
+  @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-display: swap;
+               src: url(fonts/atkinson-hyperlegible-700.woff2) format("woff2"); }
+
+  :root {
+    color-scheme: dark;
+    --ground: #07060f;   /* night sky */
+    --panel: #0f0b20;    /* panels */
+    --chip: #151030;     /* controls */
+    --line: #2a2358;     /* 2px lines */
+    --line-strong: #4a3f96;
+    --ink: #ece8ff;
+    --muted: #b6aedd;
+    --faint: #8f86bd;
+    --accent: #b79cff;   /* the one accent: selection, focus, the route */
+    --accent-bright: #d4c4ff;
+    --amber: #ffb454;    /* refusals and failures only */
+    --pad: 16px;
+    --gap: 12px;
+    --body: "Atkinson Hyperlegible", system-ui, sans-serif;
   }
-  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.4 system-ui, sans-serif; }
-  main { display:flex; flex-wrap:wrap; gap:16px; padding:16px; }
-  #stage { position:relative; }
-  canvas { display:block; max-width:100%; border:1px solid var(--line); cursor:crosshair; }
-  aside { background:var(--panel); border:1px solid var(--line); border-radius:8px;
-          padding:12px 16px; width:260px; }
-  h1 { font-size:16px; margin:0 0 8px; }
-  label { display:block; margin:8px 0 2px; }
-  input[type=number], select { width:100%; box-sizing:border-box; }
-  input[type=range] { width:100%; }
-  button { margin:8px 8px 0 0; padding:6px 12px; cursor:pointer; }
-  #status { margin-top:12px; font-family:ui-monospace, monospace; font-size:12px; white-space:pre-wrap; }
-  #message { color:#d33; min-height:1.4em; }
-  #frame { width:100%; margin-top:8px; display:none; border-radius:4px; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--ground); color: var(--ink); font: 400 14px/1.45 var(--body);
+         overflow: hidden; accent-color: var(--accent); caret-color: var(--accent); }
+  ::selection { background: var(--line-strong); color: var(--ink); }
+  * { scrollbar-width: thin; scrollbar-color: var(--line-strong) var(--panel); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--panel); }
+  ::-webkit-scrollbar-thumb { background: var(--line-strong); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  [hidden] { display: none !important; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Notched panel: a 2px line with the corner pixel cut away. */
+  .notch, .verdict { --n: 4px; background: var(--panel); border: 2px solid var(--line); color: var(--muted);
+    clip-path: polygon(0 var(--n), var(--n) var(--n), var(--n) 0, calc(100% - var(--n)) 0,
+      calc(100% - var(--n)) var(--n), 100% var(--n), 100% calc(100% - var(--n)),
+      calc(100% - var(--n)) calc(100% - var(--n)), calc(100% - var(--n)) 100%, var(--n) 100%,
+      var(--n) calc(100% - var(--n)), 0 calc(100% - var(--n))); }
+
+  /* Controls: one button family. */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 36px; padding: 6px 12px; font: 700 14px/1 var(--body); color: var(--ink);
+    background: var(--chip); border: 2px solid var(--line); cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background-color 0.15s; }
+  .btn:hover:not(:disabled) { border-color: var(--line-strong); color: var(--accent-bright); }
+  .btn:active:not(:disabled) { background: var(--line); }
+  .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-bright); }
+  .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--ground); }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-bright); border-color: var(--accent-bright);
+    color: var(--ground); }
+  .btn.icon { padding: 6px; min-width: 36px; }
+  .ico { width: 16px; height: 16px; fill: currentColor; flex: none; }
+  @media (pointer: coarse) { .btn { min-height: 44px; } .btn.icon { min-width: 44px; } }
+
+  /* Layout. JS sets data-layout: "wide" (side gutters), "tall" (rows above and below) or
+     "tight" (controls float over the map's corners). */
+  .app { position: fixed; inset: 0; container-type: size; }
+  .stage { position: absolute; inset: 0; padding: var(--pad); display: grid; gap: var(--gap);
+    --m: min(calc(100cqw - 2 * var(--pad)), calc(100cqh - 2 * var(--pad))); }
+  .mapwrap { grid-area: map; position: relative; width: var(--m); height: var(--m); align-self: center;
+    justify-self: center; background: var(--panel); border: 2px solid var(--line); }
+  #map { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: manipulation; }
+  #map:focus-visible { outline-offset: 0; }
+
+  .side { display: contents; }
+  .app[data-layout="wide"] .stage { grid-template-columns: minmax(0, 1fr) var(--m) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr); grid-template-areas: "left map right"; }
+  .app[data-layout="wide"] .side { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
+  .app[data-layout="wide"] .side.left { grid-area: left; }
+  .app[data-layout="wide"] .side.right { grid-area: right; }
+  .app[data-layout="wide"] .side > * { align-self: stretch; }
+  .app[data-layout="wide"] .buttons { margin-top: auto; }
+  .app[data-layout="tall"] .stage { grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto var(--m) auto auto; align-content: center;
+    grid-template-areas: "status buttons" "map map" "legend legend" "transport transport"; }
+  .app[data-layout="tall"] .mapwrap { justify-self: stretch; width: auto; }
+  .app[data-layout="tight"] .stage { display: block; }
+  .app[data-layout="tight"] .mapwrap { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  .app[data-layout="tight"] .status { position: absolute; left: calc(var(--pad) + 8px); top: calc(var(--pad) + 8px); }
+  .app[data-layout="tight"] .buttons { position: absolute; right: calc(var(--pad) + 8px); top: calc(var(--pad) + 8px); flex-direction: row; }
+  .app[data-layout="tight"] .transport { position: absolute; left: 50%; bottom: calc(var(--pad) + 8px); transform: translateX(-50%); }
+  .app[data-layout="tight"] .cam { position: absolute; right: calc(var(--pad) + 8px); top: calc(var(--pad) + 52px); width: 38%; max-width: 160px; }
+  .app[data-layout="tight"] .legend, .app[data-layout="tight"] .readout { display: none; }
+  .app[data-layout="tall"] .legend ul { flex-direction: row; flex-wrap: wrap; gap: 4px 16px; }
+  .app[data-layout="tall"] .transport { justify-self: center; }
+  .app[data-layout="tall"] .cam { position: absolute; right: calc(var(--pad) + 8px); top: calc(var(--pad) + 64px); width: 38%; max-width: 200px; z-index: 2; }
+
+  /* Panels. */
+  .status, .legend, .transport, .buttons, .cam { z-index: 2; }
+  .status { grid-area: status; padding: 10px 12px; align-self: start; }
+  .legend { grid-area: legend; padding: 10px 12px; align-self: start; }
+  .transport { grid-area: transport; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-self: start; }
+  .buttons { grid-area: buttons; display: flex; flex-direction: column; gap: 6px; }
+  .speeds { display: flex; gap: 6px; }
+  .app[data-layout="wide"] .speeds { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 6px; }
+  .app[data-layout="wide"] .transport { flex-direction: column; flex-wrap: nowrap; }
+  .app[data-layout="wide"] .side.right { container-type: inline-size; }
+  .cam { grid-area: cam; padding: 0; align-self: start; background: var(--ground); }
+  .cam img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; background: var(--ground); }
+  .state-text { margin: 0; display: flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 700; font-size: 16px; }
+  .dot { width: 10px; height: 10px; background: var(--faint); flex: none; }
+  [data-status="driving"] .dot { background: var(--accent); }
+  [data-status="reached"] .dot { background: var(--ink); }
+  [data-status="failed"] .dot, [data-status="offline"] .dot { background: var(--amber); }
+  [data-status="paused"] .dot { background: transparent; border: 2px solid var(--muted); }
+  [data-status="failed"] .state-label, [data-status="offline"] .state-label { color: var(--amber); }
+  .readout { margin: 8px 0 0; display: grid; gap: 2px; }
+  .readout div { display: flex; justify-content: space-between; gap: 12px; }
+  .readout dt { color: var(--faint); }
+  .readout dd { margin: 0; color: var(--ink); }
+  #state-surface { text-transform: capitalize; }
+  .legend ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .legend li { display: flex; align-items: center; gap: 8px; }
+  .sw { width: 12px; height: 12px; flex: none; border: 1px solid var(--ground); }
+  .sw.stone { background: rgb(150, 150, 155); } .sw.grass { background: rgb(96, 160, 80); }
+  .sw.sand { background: rgb(214, 190, 140); } .sw.rock { background: rgb(60, 56, 54); border-color: var(--faint); }
+
+  /* The answer to a click, where the click landed. */
+  .verdict { position: absolute; z-index: 3; width: max-content; max-width: min(240px, 70%); padding: 8px 12px;
+    border-color: var(--line-strong); pointer-events: none; animation: appear 0.15s ease-out; }
+  .verdict p { margin: 0; }
+  .verdict .title { color: var(--ink); font-weight: 700; }
+  .verdict[data-kind="refused"] { border-color: var(--amber); }
+  .verdict[data-kind="refused"] .title { color: var(--amber); }
+  @keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+  .hint { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); margin: 0; padding: 4px 10px;
+    background: color-mix(in srgb, var(--panel) 92%, transparent); border: 2px solid var(--line);
+    color: var(--muted); text-align: center; max-width: calc(100% - 16px); pointer-events: none; }
+  .app[data-layout="tight"] .hint { bottom: 64px; }
+
+  /* Map settings drawer. It opens on request and closes with Esc. */
+  .drawer { position: absolute; z-index: 5; top: 0; right: 0; bottom: 0; width: min(100%, 300px); padding: var(--pad);
+    background: var(--panel); border-left: 2px solid var(--line-strong); overflow-y: auto; }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .drawer h2 { margin: 0; font-size: 16px; color: var(--ink); }
+  fieldset { margin: 12px 0 0; padding: 0; border: 0; min-width: 0; }
+  legend { padding: 0; margin-bottom: 4px; color: var(--ink); font-weight: 700; }
+  .field { display: grid; gap: 2px; margin-top: 8px; }
+  .field label { display: flex; justify-content: space-between; color: var(--muted); }
+  .field output { color: var(--ink); }
+  input[type="number"], select { width: 100%; min-height: 36px; padding: 6px 8px; font: 400 14px/1 var(--body);
+    color: var(--ink); background: var(--chip); border: 2px solid var(--line); border-radius: 0; }
+  input[type="number"]:hover, select:hover { border-color: var(--line-strong); }
+  input[type="range"] { width: 100%; margin: 4px 0; }
+  .map-error { min-height: 1.45em; margin: 12px 0 0; color: var(--amber); }
+  .drawer .primary { width: 100%; margin-top: 8px; }
+
+
+  /* Narrow gutters or a narrow stacked frame: the two buttons keep only their icons. */
+  @container (max-width: 170px) { .buttons { flex-direction: row; } .buttons .label { display: none; } .buttons .btn { padding: 6px; min-width: 36px; } }
+  @container (max-width: 480px) { .app[data-layout="tall"] .buttons .label { display: none; } .app[data-layout="tall"] .buttons .btn { padding: 6px; min-width: 36px; } }
+  .app[data-layout="tall"] .readout { display: flex; flex-wrap: wrap; gap: 2px 16px; }
+  .app[data-layout="tall"] .readout div { gap: 6px; }
+  .app[data-layout="tall"] .transport { flex-wrap: nowrap; }
+  .app[data-layout="tall"] .speeds .btn { padding: 6px 9px; }
+  .app[data-layout="tight"] .btn { min-height: 28px; }
+  @media (pointer: coarse) { .app[data-layout="tight"] .btn { min-height: 44px; } }
+
+  /* Short frames, such as the project card: the gutters are only about 120 px wide, so the
+     controls shrink, the two buttons lose their words and the readout stacks. */
+  @container (max-height: 420px) {
+    .stage { --pad: 12px; --gap: 8px; }
+    .btn { min-height: 32px; padding: 4px 8px; font-size: 13px; }
+    .status, .legend { padding: 8px 10px; }
+    .state-text { font-size: 14px; }
+    .readout { margin-top: 6px; gap: 4px; }
+    .readout div { flex-direction: column; gap: 0; }
+    .readout dt { font-size: 12px; }
+    .legend ul { gap: 2px; }
+    .legend li { font-size: 13px; }
+    .transport { padding: 4px; gap: 4px; }
+    .app[data-layout="wide"] .speeds { grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 4px; }
+    .speeds .btn { padding: 4px 0; min-width: 0; }
+    .app[data-layout="tight"] .speeds { gap: 4px; }
+    .app[data-layout="tight"] .transport { flex-wrap: nowrap; }
+    .buttons { flex-direction: row; gap: 4px; }
+    .buttons .label { display: none; }
+    .buttons .btn { padding: 6px; min-width: 32px; }
+    .hint { font-size: 13px; padding: 2px 8px; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    [data-status="driving"] .dot { animation: pulse 1.2s steps(2) infinite; }
+    @keyframes pulse { 50% { opacity: 0.35; } }
+  }
+  @media (prefers-reduced-motion: reduce) { .verdict { animation: none; } .btn { transition: none; } }
 </style>
 </head>
 <body>
-<main>
-  <div id="stage"><canvas id="map" width="600" height="600"></canvas></div>
-  <aside>
-    <h1>Click the map to send the worm</h1>
-    <div id="message"></div>
-    <label>Seed <input id="seed" type="number" value="0" min="0"></label>
-    <label>Size
-      <select id="size"><option>5</option><option selected>10</option><option>15</option></select>
-    </label>
-    <label>Stone / concrete <input id="mix-c" type="range" min="0" max="1" step="0.05" value="0.4"></label>
-    <label>Grass <input id="mix-g" type="range" min="0" max="1" step="0.05" value="0.3"></label>
-    <label>Sand <input id="mix-s" type="range" min="0" max="1" step="0.05" value="0.3"></label>
-    <label>Max slope (deg) <input id="slope" type="range" min="0" max="18" step="1" value="12"></label>
-    <label>Rocks <input id="rocks" type="range" min="0" max="30" step="1" value="12"></label>
-    <label>Ditches <input id="ditches" type="range" min="0" max="6" step="1" value="2"></label>
-    <button id="new-map">New map</button>
-    <button id="pause">Pause</button>
-    <label>Speed <input id="speed" type="range" min="1" max="20" step="1" value="4"></label>
-    <div id="status">loading...</div>
-    <img id="frame" alt="follow camera">
-  </aside>
-</main>
+<div class="app" id="app" data-layout="tight">
+  <div class="stage">
+    <div class="side left">
+    <section class="status notch" aria-label="Worm status">
+      <p class="state-text" id="state-text" data-status="idle" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span><span class="state-label" id="state-label">Ready</span>
+      </p>
+      <dl class="readout">
+        <div><dt>Surface</dt><dd id="state-surface">-</dd></div>
+        <div><dt>Replans</dt><dd class="num" id="state-replans">0</dd></div>
+        <div><dt>Sim time</dt><dd class="num" id="state-time">0.0 s</dd></div>
+      </dl>
+    </section>
+
+    <section class="legend notch" id="legend" aria-label="Map legend">
+      <ul>
+        <li><span class="sw stone"></span>Stone</li>
+        <li><span class="sw grass"></span>Grass</li>
+        <li><span class="sw sand"></span>Sand</li>
+        <li><span class="sw rock"></span>Rock</li>
+      </ul>
+    </section>
+    </div>
+
+    <div class="mapwrap" id="mapwrap">
+      <canvas id="map" tabindex="0" role="application"
+              aria-label="Terrain map. Click a point to send the worm there. With the keyboard, move the cursor with the arrow keys and press Enter."
+              aria-describedby="hint"></canvas>
+      <div class="verdict" id="verdict" role="status" hidden></div>
+      <p class="hint" id="hint">Click the map to send the worm.</p>
+    </div>
+
+    <div class="side right">
+    <div class="cam notch" id="cam" hidden></div>
+
+    <div class="transport notch" role="group" aria-label="Playback">
+      <button class="btn" id="pause" type="button" aria-pressed="false">
+        <svg class="ico ico-pause" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path d="M1 1h2v6H1zM5 1h2v6H5z"/></svg>
+        <svg class="ico ico-play" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false" hidden><path d="M2 1h1v6H2zM3 2h1v4H3zM4 3h1v2H4z"/></svg>
+        <span id="pause-label">Pause</span>
+      </button>
+      <div class="speeds" role="group" aria-label="Speed">
+        <button class="btn num" type="button" data-speed="1" aria-pressed="true">1&times;</button>
+        <button class="btn num" type="button" data-speed="2" aria-pressed="false">2&times;</button>
+        <button class="btn num" type="button" data-speed="4" aria-pressed="false">4&times;</button>
+        <button class="btn num" type="button" data-speed="8" aria-pressed="false">8&times;</button>
+        <button class="btn num" type="button" data-speed="16" aria-pressed="false">16&times;</button>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button class="btn" id="cam-toggle" type="button" aria-label="Follow cam" title="Follow cam" aria-pressed="false" aria-controls="cam">
+        <svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M0 2h2V1h4v1h2v5H0zM3 3h2v2H3z"/></svg>
+        <span class="label">Follow cam</span>
+      </button>
+      <button class="btn" id="drawer-toggle" type="button" aria-label="Map settings" title="Map settings" aria-expanded="false" aria-controls="drawer">
+        <svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path d="M0 1h8v1H0zM1 0h2v3H1zM0 5h8v1H0zM5 4h2v3H5z"/></svg>
+        <span class="label">Map settings</span>
+      </button>
+    </div>
+    </div>
+  </div>
+
+  <section class="drawer" id="drawer" aria-labelledby="drawer-title" hidden>
+    <div class="drawer-head">
+      <h2 id="drawer-title">Map settings</h2>
+      <button class="btn icon" id="drawer-close" type="button" aria-label="Close map settings">
+        <svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path d="M1 1h1v1H1zM2 2h1v1H2zM3 3h2v2H3zM5 5h1v1H5zM6 6h1v1H6zM6 1h1v1H6zM5 2h1v1H5zM2 5h1v1H2zM1 6h1v1H1z"/></svg>
+      </button>
+    </div>
+    <fieldset>
+      <legend>Map</legend>
+      <div class="field"><label for="seed">Seed</label><input id="seed" type="number" value="0" min="0" step="1"></div>
+      <div class="field"><label for="size">Size in metres</label>
+        <select id="size"><option>5</option><option selected>10</option><option>15</option></select></div>
+    </fieldset>
+    <fieldset>
+      <legend>Ground mix</legend>
+      <div class="field"><label for="mix-c">Stone <output class="num" for="mix-c" id="mix-c-out">0.4</output></label>
+        <input id="mix-c" type="range" min="0" max="1" step="0.05" value="0.4"></div>
+      <div class="field"><label for="mix-g">Grass <output class="num" for="mix-g" id="mix-g-out">0.3</output></label>
+        <input id="mix-g" type="range" min="0" max="1" step="0.05" value="0.3"></div>
+      <div class="field"><label for="mix-s">Sand <output class="num" for="mix-s" id="mix-s-out">0.3</output></label>
+        <input id="mix-s" type="range" min="0" max="1" step="0.05" value="0.3"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Terrain</legend>
+      <div class="field"><label for="slope">Max slope <output class="num" for="slope" id="slope-out">12&deg;</output></label>
+        <input id="slope" type="range" min="0" max="18" step="1" value="12"></div>
+      <div class="field"><label for="rocks">Rocks <output class="num" for="rocks" id="rocks-out">12</output></label>
+        <input id="rocks" type="range" min="0" max="30" step="1" value="12"></div>
+      <div class="field"><label for="ditches">Ditches <output class="num" for="ditches" id="ditches-out">2</output></label>
+        <input id="ditches" type="range" min="0" max="6" step="1" value="2"></div>
+    </fieldset>
+    <p class="map-error" id="map-error" role="status"></p>
+    <button class="btn primary" id="new-map" type="button">Make new map</button>
+  </section>
+</div>
+
 <script>
 "use strict";
-// Pixel convention, shared with worm/mapviz.py: pixel x grows with world +x and
-// pixel y grows downward, so world +y is at the top of the image.
-let info = null;      // /api/map.json
-let mapImage = null;  // /api/map.png
-let paused = false;
-let rejected = null;  // {x, y} of the last goal the planner refused
-let lastMapId = -1;
-const canvas = document.getElementById("map");
-const ctx = canvas.getContext("2d");
+// Where the data comes from. The page only talks to this object, so another source (for
+// example a simulation running in the browser) can replace it without touching the rest.
+const api = {
+  async json(path, body) {
+    const r = await fetch(path, body === undefined ? undefined :
+      {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    return r.json();
+  },
+  mapInfo: () => api.json("/api/map.json"),
+  mapImageUrl: (id) => "/api/map.png?id=" + id,
+  state: () => api.json("/api/state"),
+  goal: (x, y) => api.json("/api/goal", {x, y}),
+  newMap: (params) => api.json("/api/map", params),
+  control: (body) => api.json("/api/control", body),
+  frameUrl: () => "/api/frame.jpg?t=" + Date.now(),
+};
+
+// Colours match DESIGN.md. Amber marks refusals only.
+const C = {ground: "#07060f", ink: "#ece8ff", faint: "#8f86bd", accent: "#b79cff",
+           bright: "#d4c4ff", amber: "#ffb454"};
 const $ = (id) => document.getElementById(id);
+const app = $("app"), canvas = $("map"), ctx = canvas.getContext("2d"), wrap = $("mapwrap");
 
-function worldToPixel(x, y) {
-  return [(x - info.extent[0]) * info.px_per_m, (info.extent[3] - y) * info.px_per_m];
-}
-function pixelToWorld(px, py) {
-  return [px / info.px_per_m + info.extent[0], info.extent[3] - py / info.px_per_m];
-}
+let info = null, mapImage = null, state = null, lastMapId = -1;
+let rejected = null;          // world point of the last refused goal
+let cursor = null;            // world point of the keyboard cursor
+let paused = false, camOn = false, camAvailable = true, goalSent = false;
+let verdictTimer = 0;
 
-async function post(path, body) {
-  const r = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"},
-                               body: JSON.stringify(body)});
-  return r.json();
-}
+// Pixel convention shared with worm/mapviz.py: pixel x grows with world +x, pixel y grows
+// downward, so world +y is the top of the image. k scales map pixels to canvas pixels.
+const k = () => canvas.width / info.width;
+const toPixel = (x, y) => [(x - info.extent[0]) * info.px_per_m * k(), (info.extent[3] - y) * info.px_per_m * k()];
+const toWorld = (px, py) => [px / (info.px_per_m * k()) + info.extent[0], info.extent[3] - py / (info.px_per_m * k())];
+const dpr = () => Math.max(1, window.devicePixelRatio || 1);
 
-async function loadMap() {
-  info = await (await fetch("/api/map.json")).json();
-  canvas.width = info.width;
-  canvas.height = info.height;
-  mapImage = new Image();
-  mapImage.onload = draw;
-  mapImage.src = "/api/map.png?id=" + info.map_id;
-  lastMapId = info.map_id;
-  rejected = null;
+// ---------- layout ----------
+function layout() {
+  const w = app.clientWidth, h = app.clientHeight;
+  app.dataset.layout = w - h >= 232 ? "wide" : h - w >= 160 ? "tall" : "tight";
 }
+new ResizeObserver(() => {
+  layout();
+  const rect = wrap.getBoundingClientRect();
+  const size = Math.max(1, Math.round((rect.width - 4) * dpr()));
+  if (canvas.width !== size) { canvas.width = size; canvas.height = size; }
+  draw();
+}).observe(app);
 
-function polyline(points, colour, width) {
+// ---------- drawing ----------
+function line(points, colour, cssWidth) {
   if (points.length < 2) return;
-  ctx.strokeStyle = colour; ctx.lineWidth = width; ctx.beginPath();
-  points.forEach((p, i) => {
-    const [x, y] = worldToPixel(p[0], p[1]);
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  });
+  ctx.strokeStyle = colour; ctx.lineWidth = cssWidth * dpr(); ctx.lineJoin = "round"; ctx.lineCap = "round";
+  ctx.beginPath();
+  points.forEach((p, i) => { const [x, y] = toPixel(p[0], p[1]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
   ctx.stroke();
 }
-function dot(p, radius, colour) {
-  const [x, y] = worldToPixel(p[0], p[1]);
-  ctx.fillStyle = colour; ctx.beginPath(); ctx.arc(x, y, radius, 0, 2 * Math.PI); ctx.fill();
+function ring(p, r, colour, fill) {
+  const [x, y] = toPixel(p[0], p[1]);
+  ctx.beginPath(); ctx.arc(x, y, r * dpr(), 0, 2 * Math.PI);
+  if (fill) { ctx.fillStyle = colour; ctx.fill(); } else { ctx.strokeStyle = colour; ctx.lineWidth = 2 * dpr(); ctx.stroke(); }
 }
-
-let state = null;
+function cross(p, half, colour, width) {
+  const [x, y] = toPixel(p[0], p[1]), h = half * dpr();
+  ctx.strokeStyle = colour; ctx.lineWidth = width * dpr(); ctx.beginPath();
+  ctx.moveTo(x - h, y - h); ctx.lineTo(x + h, y + h); ctx.moveTo(x + h, y - h); ctx.lineTo(x - h, y + h); ctx.stroke();
+}
 function draw() {
-  if (!info || !mapImage || !mapImage.complete) return;
-  ctx.drawImage(mapImage, 0, 0);
+  if (!info || !mapImage || !mapImage.complete || !canvas.width) return;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(mapImage, 0, 0, canvas.width, canvas.height);
   if (state) {
-    polyline(state.trail || [], "rgba(255,255,255,0.8)", 2);
-    polyline(state.path || [], "#1e5aff", 2);
-    (state.waypoints || []).forEach((w, i) => dot(w, 4, i < state.reached ? "#828282" : "#e62828"));
-    if (state.goal) dot(state.goal, 6, "#ffdc00");
-    polyline(state.body || [], "#111", 4);
+    line(state.trail || [], "rgba(236, 232, 255, 0.45)", 2);
+    const path = state.path || [];
+    line(path, C.ground, 5); line(path, C.accent, 2.5);
+    (state.waypoints || []).forEach((w, i) => {
+      if (i < state.reached) ring(w, 3, C.faint, true);
+      else { ring(w, 4, C.ground, true); ring(w, 3, C.bright, false); }
+    });
+    if (state.goal) { ring(state.goal, 7, C.ground, true); ring(state.goal, 5, C.amber, true); }
+    const body = state.body || [];
+    line(body, C.ground, 7); line(body, C.ink, 3.5);
     if (state.head) {
-      const [x, y] = worldToPixel(state.head[0], state.head[1]);
+      const [x, y] = toPixel(state.head[0], state.head[1]), s = dpr();
       ctx.save(); ctx.translate(x, y); ctx.rotate(-state.yaw); // world yaw is counterclockwise
-      ctx.fillStyle = "#ff7a00"; ctx.beginPath();
-      ctx.moveTo(10, 0); ctx.lineTo(-6, 6); ctx.lineTo(-6, -6); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(10 * s, 0); ctx.lineTo(-6 * s, 6.5 * s); ctx.lineTo(-6 * s, -6.5 * s); ctx.closePath();
+      ctx.fillStyle = C.ink; ctx.strokeStyle = C.ground; ctx.lineWidth = 2 * s; ctx.stroke(); ctx.fill();
       ctx.restore();
     }
   }
-  if (rejected) {
-    const [x, y] = worldToPixel(rejected[0], rejected[1]);
-    ctx.strokeStyle = "#e00"; ctx.lineWidth = 3; ctx.beginPath();
-    ctx.moveTo(x - 8, y - 8); ctx.lineTo(x + 8, y + 8);
-    ctx.moveTo(x + 8, y - 8); ctx.lineTo(x - 8, y + 8); ctx.stroke();
+  if (rejected) { cross(rejected, 8, C.ground, 5); cross(rejected, 8, C.amber, 2.5); }
+  if (cursor && document.activeElement === canvas && canvas.matches(":focus-visible")) {
+    const [x, y] = toPixel(cursor[0], cursor[1]), s = dpr();
+    ctx.strokeStyle = C.ground; ctx.lineWidth = 5 * s; ctx.beginPath();
+    ctx.moveTo(x - 12 * s, y); ctx.lineTo(x + 12 * s, y); ctx.moveTo(x, y - 12 * s); ctx.lineTo(x, y + 12 * s); ctx.stroke();
+    ctx.strokeStyle = C.bright; ctx.lineWidth = 2 * s; ctx.stroke();
   }
 }
 
-canvas.addEventListener("click", async (event) => {
+// ---------- the answer to a click ----------
+const REFUSALS = {
+  GOAL_BLOCKED: ["Blocked ground", "That spot is a rock, a steep slope or the edge of the map."],
+  NO_PATH: ["No route", "Rocks, ditches or steep ground cut that spot off."],
+  OUT_OF_BOUNDS: ["Outside the map", "That point is off the edge of the map."],
+  START_BLOCKED: ["Worm is boxed in", "There is no free ground near the worm."],
+};
+function showVerdict(kind, title, body, cssX, cssY) {
+  const el = $("verdict");
+  el.dataset.kind = kind;
+  el.replaceChildren();
+  const t = document.createElement("p"); t.className = "title"; t.textContent = title; el.append(t);
+  if (body) { const b = document.createElement("p"); b.textContent = body; el.append(b); }
+  el.hidden = false;
+  // Beside the click, never on it, and inside the map.
+  const w = el.offsetWidth, h = el.offsetHeight, box = wrap.clientWidth, gap = 14;
+  let x = cssX + gap, y = cssY + gap;
+  if (x + w > box - 6) x = cssX - gap - w;
+  if (y + h > box - 6) y = cssY - gap - h;
+  el.style.left = Math.max(6, x) + "px"; el.style.top = Math.max(6, y) + "px";
+  clearTimeout(verdictTimer);
+  verdictTimer = setTimeout(hideVerdict, kind === "refused" ? 6000 : 4000);
+}
+function hideVerdict() { clearTimeout(verdictTimer); $("verdict").hidden = true; }
+const routeLength = (path) => path.reduce((sum, p, i) => i ? sum + Math.hypot(p[0] - path[i - 1][0], p[1] - path[i - 1][1]) : 0, 0);
+
+async function sendGoal(x, y, cssX, cssY) {
   if (!info) return;
-  const rect = canvas.getBoundingClientRect();
-  const px = (event.clientX - rect.left) * canvas.width / rect.width;
-  const py = (event.clientY - rect.top) * canvas.height / rect.height;
-  const [x, y] = pixelToWorld(px, py);
-  const result = await post("/api/goal", {x, y});
-  if (result.ok) { rejected = null; $("message").textContent = ""; }
-  else {
+  const result = await api.goal(x, y);
+  if (result.ok) {
+    rejected = null; goalSent = true; $("hint").hidden = true;
+    const plan = result.plan, metres = routeLength(plan.path).toFixed(1);
+    const n = plan.waypoints.length, notes = [n + (n === 1 ? " waypoint" : " waypoints")];
+    if (plan.goal_snapped) notes.push("goal moved to open ground");
+    showVerdict("route", "Route " + metres + " m", notes.join(", "), cssX, cssY);
+  } else {
     rejected = [x, y];
-    $("message").textContent = result.reason ? result.reason + ": " + (result.detail || "")
-                                              : (result.error || "goal refused");
+    const known = REFUSALS[result.reason];
+    showVerdict("refused", known ? known[0] : "Can't go there",
+                known ? known[1] : (result.detail || result.error || "The goal was refused."), cssX, cssY);
   }
   draw();
+}
+
+canvas.addEventListener("click", (event) => {
+  if (!info) return;
+  const rect = canvas.getBoundingClientRect();
+  const cssX = event.clientX - rect.left, cssY = event.clientY - rect.top;
+  const [x, y] = toWorld(cssX * canvas.width / rect.width, cssY * canvas.height / rect.height);
+  sendGoal(x, y, cssX, cssY);
 });
+
+// Keyboard: arrow keys move a cursor over the map, Enter sends the worm.
+canvas.addEventListener("focus", () => {
+  if (!info) return;
+  if (!cursor) cursor = state && state.head ? [state.head[0], state.head[1]] :
+    [(info.extent[0] + info.extent[1]) / 2, (info.extent[2] + info.extent[3]) / 2];
+  if (!goalSent) { $("hint").textContent = "Arrow keys move the cursor. Enter sends the worm."; $("hint").hidden = false; }
+  draw();
+});
+canvas.addEventListener("blur", () => { draw(); });
+canvas.addEventListener("keydown", (event) => {
+  if (!info || !cursor) return;
+  const step = (event.shiftKey ? 1 : 0.25);
+  const moves = {ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step]};
+  if (moves[event.key]) {
+    event.preventDefault();
+    cursor = [Math.min(info.extent[1], Math.max(info.extent[0], cursor[0] + moves[event.key][0])),
+              Math.min(info.extent[3], Math.max(info.extent[2], cursor[1] + moves[event.key][1]))];
+    draw();
+  } else if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    const [px, py] = toPixel(cursor[0], cursor[1]);
+    sendGoal(cursor[0], cursor[1], px * wrap.clientWidth / canvas.width, py * wrap.clientHeight / canvas.height);
+  }
+});
+
+// ---------- controls ----------
+function setPaused(value) {
+  paused = value;
+  $("pause").setAttribute("aria-pressed", String(paused));
+  $("pause-label").textContent = paused ? "Resume" : "Pause";
+  document.querySelector(".ico-pause").hidden = paused;
+  document.querySelector(".ico-play").hidden = !paused;
+}
+$("pause").addEventListener("click", async () => { setPaused(!paused); await api.control({pause: paused}); });
+function setSpeed(value) {
+  document.querySelectorAll("[data-speed]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.speed) === value)));
+}
+document.querySelectorAll("[data-speed]").forEach((b) => b.addEventListener("click", async () => {
+  const value = Number(b.dataset.speed); setSpeed(value); await api.control({speed: value});
+}));
+
+$("cam-toggle").addEventListener("click", () => {
+  if (!camAvailable) return;
+  camOn = !camOn;
+  if (camOn && !$("frame")) {
+    // Made on first use, so the page never carries an image with no source.
+    const img = document.createElement("img");
+    img.id = "frame"; img.alt = "Follow camera view of the worm";
+    $("cam").append(img);
+  }
+  $("cam-toggle").setAttribute("aria-pressed", String(camOn));
+  $("cam").hidden = !camOn;
+});
+
+const drawer = $("drawer"), drawerToggle = $("drawer-toggle");
+function setDrawer(open) {
+  drawer.hidden = !open;
+  drawerToggle.setAttribute("aria-expanded", String(open));
+  if (open) $("seed").focus(); else drawerToggle.focus();
+}
+drawerToggle.addEventListener("click", () => setDrawer(drawer.hidden));
+$("drawer-close").addEventListener("click", () => setDrawer(false));
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!drawer.hidden) setDrawer(false); else hideVerdict();
+});
+const outputs = {"mix-c": (v) => v, "mix-g": (v) => v, "mix-s": (v) => v, slope: (v) => v + "°", rocks: (v) => v, ditches: (v) => v};
+Object.keys(outputs).forEach((id) => $(id).addEventListener("input", () => { $(id + "-out").textContent = outputs[id]($(id).value); }));
 
 $("new-map").addEventListener("click", async () => {
-  const result = await post("/api/map", {
-    seed: Number($("seed").value), size: Number($("size").value),
-    mix: [Number($("mix-c").value), Number($("mix-g").value), Number($("mix-s").value)],
-    max_slope_deg: Number($("slope").value), n_rocks: Number($("rocks").value),
-    n_ditches: Number($("ditches").value),
-  });
-  $("message").textContent = result.ok ? "" : (result.error || "map refused");
-  await loadMap();
+  const button = $("new-map");
+  button.disabled = true; button.textContent = "Making map…"; $("map-error").textContent = "";
+  try {
+    const result = await api.newMap({
+      seed: Number($("seed").value), size: Number($("size").value),
+      mix: [Number($("mix-c").value), Number($("mix-g").value), Number($("mix-s").value)],
+      max_slope_deg: Number($("slope").value), n_rocks: Number($("rocks").value),
+      n_ditches: Number($("ditches").value),
+    });
+    if (result.ok) { await loadMap(); setDrawer(false); }
+    else $("map-error").textContent = result.error || "That map was refused. Change a setting and try again.";
+  } catch (e) {
+    $("map-error").textContent = "No connection to the server.";
+  } finally {
+    button.disabled = false; button.textContent = "Make new map";
+  }
 });
-$("pause").addEventListener("click", async () => {
-  paused = !paused;
-  await post("/api/control", {pause: paused});
-  $("pause").textContent = paused ? "Resume" : "Pause";
-});
-$("speed").addEventListener("input", () => post("/api/control", {speed: Number($("speed").value)}));
+
+// ---------- data ----------
+async function loadMap() {
+  info = await api.mapInfo();
+  mapImage = new Image();
+  mapImage.onload = draw;
+  mapImage.src = api.mapImageUrl(info.map_id);
+  lastMapId = info.map_id;
+  rejected = null; cursor = null; goalSent = false; hideVerdict();
+  $("hint").textContent = "Click the map to send the worm."; $("hint").hidden = false;
+}
+
+const LABELS = {idle: "Ready", driving: "Driving", reached: "Arrived", failed: "Stuck"};
+function showState(s) {
+  const status = s.paused && s.status === "driving" ? "paused" : s.status;
+  $("state-text").dataset.status = status;
+  $("state-label").textContent = status === "paused" ? "Paused" : (LABELS[s.status] || s.status);
+  $("state-text").title = s.failure || "";
+  $("state-surface").textContent = s.surface;
+  $("state-replans").textContent = s.replans;
+  $("state-time").textContent = Number(s.sim_time).toFixed(1) + " s";
+  if (s.status !== "idle") $("hint").hidden = true; // the worm already has a goal
+}
 
 let frameBusy = false;
+function refreshFrame() {
+  if (!camOn || frameBusy) return;
+  frameBusy = true;
+  const img = $("frame");
+  img.onload = () => { frameBusy = false; };
+  img.onerror = () => {
+    // No renderer on the server: switch the follow cam off and say so.
+    frameBusy = false; camAvailable = false; camOn = false; $("cam").hidden = true;
+    const button = $("cam-toggle");
+    button.setAttribute("aria-pressed", "false"); button.setAttribute("aria-disabled", "true");
+    button.title = "The follow cam is not available on this server";
+  };
+  img.src = api.frameUrl();
+}
+
+let synced = false;
 async function poll() {
   try {
-    state = await (await fetch("/api/state")).json();
+    state = await api.state();
+    if (!synced) { setPaused(!!state.paused); setSpeed(state.speed); synced = true; }
     if (state.map_id !== undefined && state.map_id !== lastMapId) await loadMap();
-    $("status").textContent =
-      "policy: " + state.policy + "\nstatus: " + state.status +
-      (state.failure ? " (" + state.failure + ")" : "") +
-      "\nreplans: " + state.replans + "\nsurface: " + state.surface +
-      "\nsim time: " + state.sim_time + " s\nspeed: x" + state.speed;
-    draw();
-    if (!frameBusy) {
-      frameBusy = true;
-      const img = $("frame");
-      img.onload = () => { img.style.display = "block"; frameBusy = false; };
-      img.onerror = () => { img.style.display = "none"; frameBusy = false; };
-      img.src = "/api/frame.jpg?t=" + Date.now();
-    }
-  } catch (e) { $("status").textContent = "no connection to the server"; }
+    showState(state); draw(); refreshFrame();
+  } catch (e) {
+    $("state-text").dataset.status = "offline"; $("state-label").textContent = "No connection";
+  }
   setTimeout(poll, 100);
 }
 poll();

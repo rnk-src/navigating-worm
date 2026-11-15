@@ -33,5 +33,65 @@ def test_index_html_references_every_api_endpoint(page: str) -> None:
 
 
 def test_index_html_has_a_map_canvas_and_the_controls(page: str) -> None:
-    for element_id in ("map", "seed", "size", "new-map", "speed", "pause", "status"):
+    for element_id in ("map", "seed", "size", "new-map", "pause", "state-text"):
         assert f'id="{element_id}"' in page, element_id
+
+
+NEW_IDS = (
+    "map",
+    "verdict",
+    "state-text",
+    "state-surface",
+    "state-replans",
+    "state-time",
+    "legend",
+    "cam",
+    "cam-toggle",
+    "pause",
+    "drawer",
+    "drawer-toggle",
+    "drawer-close",
+    "seed",
+    "size",
+    "new-map",
+    "map-error",
+)
+
+
+def test_index_html_has_the_click_anchored_layout(page: str) -> None:
+    for element_id in NEW_IDS:
+        assert f'id="{element_id}"' in page, element_id
+
+
+def test_index_html_has_speed_presets_in_place_of_a_slider(page: str) -> None:
+    speeds = re.findall(r'data-speed="(\d+)"', page)
+    assert speeds == ["1", "2", "4", "8", "16"]
+    assert 'id="speed"' not in page
+
+
+def test_index_html_loads_only_its_own_fonts(page: str) -> None:
+    faces = re.findall(r"url\(([^)]+)\)", page)
+    assert faces, "the page declares no font files"
+    assert all(re.fullmatch(r"""["']?fonts/[a-z0-9-]+\.woff2["']?""", f) for f in faces)
+
+
+def test_index_html_draws_its_icons_instead_of_using_glyphs(page: str) -> None:
+    glyphs = re.findall(r"[\u2190-\u2BFF\U0001F300-\U0001FAFF]", page)
+    assert glyphs == []
+    assert page.count("<svg") >= 5
+
+
+def test_index_html_names_every_button_and_labels_every_field(page: str) -> None:
+    for match in re.finditer(r"<button\b([^>]*)>(.*?)</button>", page, flags=re.S):
+        attrs, inner = match.groups()
+        text = re.sub(r"<[^>]+>", "", inner).strip()
+        assert "aria-label=" in attrs or text, match.group(0)[:80]
+    for field in re.finditer(r"<(?:input|select)\b([^>]*)>", page):
+        assert "id=" in field.group(1)
+    assert page.count("<label") >= page.count("<input") + page.count("<select") - 1
+
+
+def test_index_html_themes_the_browser_parts(page: str) -> None:
+    for needle in ("::selection", "scrollbar", ":focus-visible", "tabular-nums", "accent-color"):
+        assert needle in page, needle
+    assert "prefers-reduced-motion" in page
