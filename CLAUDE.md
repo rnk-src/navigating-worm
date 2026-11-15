@@ -4,7 +4,7 @@ Tier: portfolio
 Last updated: 2026-11-14
 
 ## What this is
-A servo-driven worm robot that learns a terrain-adaptive gait with RL in MuJoCo, then transfers it to hardware. M1, the simulation MVP, is complete. M2 is in progress: terrain worlds (M2a), the planner (M2b) and the click-to-go demo (M2c) are built; the terrain-aware policy (M2d) is in training.
+A servo-driven worm robot that learns a terrain-adaptive gait with RL in MuJoCo, then transfers it to hardware. M1, the simulation MVP, is complete. M2 is in progress: terrain worlds (M2a), the planner (M2b) and the click-to-go demo (M2c) are built; the terrain-aware policy (M2d) is trained and drives the demo by default.
 
 ## Commands
 - Check (format + lint + types + tests): `make check`
@@ -28,7 +28,6 @@ A servo-driven worm robot that learns a terrain-adaptive gait with RL in MuJoCo,
 ## Gotchas
 - This repo is public. Put no real name, email, absolute path or personal setup reference in any file.
 - Never commit to `main`. Use a `feat/` or `fix/` branch and open a PR.
-- The M2 branches are stacked. Each PR targets the branch before it. Merge them in order.
 - Never flash firmware or actuate hardware without asking first.
 - Write the failing test first. Watch it fail before you write the code.
 - A positive gait bias turns the worm left. Joint signs are easy to get backwards.
