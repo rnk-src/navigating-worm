@@ -257,3 +257,13 @@ def test_session_rejects_an_unknown_observation_version() -> None:
     future = demo.Controller("future", scripted.policy, obs_version=99)
     with pytest.raises(ValueError, match="observation version 99"):
         demo.DemoSession(future)
+
+
+def test_the_demo_module_does_not_need_imageio_to_load() -> None:
+    """The browser has no imageio. It is only needed to encode a PNG or a JPEG."""
+    import subprocess
+    import sys
+
+    code = "import sys, worm.demo; print('imageio' in sys.modules)"
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == "False"
