@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { followPose, terrainGrid } from '../src/camera-math';
+import { followPose, heading, smoothAngle, smoothPoint, terrainGrid } from '../src/camera-math';
 
 test('terrainGrid places each vertex by row, column and height', () => {
   const g = terrainGrid(new Float32Array([0, 0.5, 1, 0, 0, 0.25]), 2, 3, [-1, 1, -2, 2], 0.4);
@@ -24,4 +24,28 @@ test('followPose sits behind and above the head, looking at it', () => {
   expect(pose.position[1]).toBeCloseTo(1.5, 6);
   expect(pose.position[2]).toBeCloseTo(0.4, 6);
   expect(pose.target).toEqual([1, 2, 0.1]);
+});
+
+test('smoothAngle covers 1 - 1/e of the gap in one time constant', () => {
+  expect(smoothAngle(0, 1, 2, 2)).toBeCloseTo(1 - Math.exp(-1), 6);
+});
+
+test('smoothAngle turns the short way across the +-pi seam', () => {
+  const next = smoothAngle(3.0, -3.0, 0.1, 0.5);
+  expect(next).toBeGreaterThan(3.0); // keeps going up through pi, not back through 0
+});
+
+test('a wiggling head does not swing the smoothed heading', () => {
+  let yaw = 0;
+  for (let i = 0; i < 60; i++) yaw = smoothAngle(yaw, i % 2 ? 0.6 : -0.6, 1 / 60, 1.2);
+  expect(Math.abs(yaw)).toBeLessThan(0.05);
+});
+
+test('heading points from the tail to the head', () => {
+  expect(heading([0, 0, 0], [0, 1, 0])).toBeCloseTo(Math.PI / 2, 6);
+});
+
+test('smoothPoint eases each coordinate', () => {
+  const p = smoothPoint([0, 0, 0], [1, 2, 3], 1, 1);
+  expect(p[1]).toBeCloseTo(2 * (1 - Math.exp(-1)), 6);
 });

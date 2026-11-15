@@ -50,3 +50,31 @@ export function followPose(
     target: [head[0], head[1], head[2]],
   };
 }
+
+const TWO_PI = Math.PI * 2;
+
+/** Ease `current` toward `target` with time constant `tau` seconds, turning the short way round. */
+export function smoothAngle(current: number, target: number, dt: number, tau: number): number {
+  const k = 1 - Math.exp(-dt / tau);
+  const gap = ((((target - current) % TWO_PI) + 3 * Math.PI) % TWO_PI) - Math.PI;
+  return current + gap * k;
+}
+
+export function smoothPoint(
+  current: [number, number, number],
+  target: ArrayLike<number>,
+  dt: number,
+  tau: number,
+): [number, number, number] {
+  const k = 1 - Math.exp(-dt / tau);
+  return [
+    current[0] + (target[0] - current[0]) * k,
+    current[1] + (target[1] - current[1]) * k,
+    current[2] + (target[2] - current[2]) * k,
+  ];
+}
+
+/** Direction of travel along the whole body, from the tail to the head. */
+export function heading(tail: ArrayLike<number>, head: ArrayLike<number>): number {
+  return Math.atan2(head[1] - tail[1], head[0] - tail[0]);
+}

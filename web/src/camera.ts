@@ -2,11 +2,14 @@
 // loads only when the cam is first switched on.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { BrowserApi } from './api';
-import { followPose, terrainGrid } from './camera-math';
+import { followPose, heading, smoothAngle, smoothPoint, terrainGrid } from './camera-math';
 import type { Engine } from './engine';
 
-const BACK_M = 0.45;
-const UP_M = 0.3;
+// The camera eases toward the worm slowly, so the body's wiggle does not shake the view.
+const BACK_M = 0.7;
+const UP_M = 0.45;
+const TURN_TAU_S = 1.4;
+const MOVE_TAU_S = 0.5;
 const GOAL_REFRESH_MS = 250;
 
 export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null) {
@@ -90,6 +93,8 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
     }
 
     let lastGoal = 0;
+    let lastT = 0;
+    let eased: { yaw: number; at: [number, number, number] } | null = null;
     let raf = 0;
     let alive = true;
     function frame(t: number): void {
@@ -100,6 +105,7 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
       const current = engine.mapInfo().map_id;
       if (current !== mapId) {
         mapId = current; // block repeats while the async rebuild runs
+        eased = null;
         void rebuild(engine);
         return;
       }
@@ -114,9 +120,20 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
         mesh.matrixAutoUpdate = false;
         mesh.matrix.copy(q);
       }
-      const b0 = segs[0].userData.body as number;
-      const yaw = Math.atan2(xmat[b0 * 9 + 3], xmat[b0 * 9]);
-      const pose = followPose([xpos[b0 * 3], xpos[b0 * 3 + 1], xpos[b0 * 3 + 2]], yaw, BACK_M, UP_M);
+      const at = (mesh: any): number[] => {
+        const b = mesh.userData.body as number;
+        return [xpos[b * 3], xpos[b * 3 + 1], xpos[b * 3 + 2]];
+      };
+      const head = at(segs[0]);
+      const tail = at(segs[segs.length - 1]);
+      const middle = [(head[0] + tail[0]) / 2, (head[1] + tail[1]) / 2, (head[2] + tail[2]) / 2];
+      const dt = Math.min((t - lastT) / 1000, 0.1);
+      lastT = t;
+      const yaw = heading(tail, head);
+      eased = eased
+        ? { yaw: smoothAngle(eased.yaw, yaw, dt, TURN_TAU_S), at: smoothPoint(eased.at, middle, dt, MOVE_TAU_S) }
+        : { yaw, at: [middle[0], middle[1], middle[2]] };
+      const pose = followPose(eased.at, eased.yaw, BACK_M, UP_M);
       camera.position.set(...pose.position);
       camera.lookAt(...pose.target);
       if (t - lastGoal > GOAL_REFRESH_MS) {
