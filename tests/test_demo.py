@@ -228,3 +228,32 @@ def test_sampled_trail_matches_a_slice_of_the_full_trail() -> None:
     assert nav is not None
     assert nav.trail_length == len(nav.trail) > 10
     assert (nav.sampled_trail(4, 5) == nav.trail[::4][-5:]).all()
+
+
+# --- observation v2 policies ---
+
+REPO = Path(__file__).parent.parent
+TERRAIN_POLICY = REPO / "results" / "policy_terrain"
+
+
+def test_default_search_prefers_the_terrain_policy() -> None:
+    search = [REPO / path for path in demo.POLICY_SEARCH]
+    controller = demo.load_controller(None, search=search)
+    assert controller.name == "policy_terrain" and controller.obs_version == 2
+
+
+def test_session_drives_an_obs_v2_policy_to_the_goal() -> None:
+    made = demo.DemoSession(demo.load_controller(TERRAIN_POLICY))
+    made.new_map(SMALL_MAP)
+    made.goal((1.0, 0.5))
+    made.tick(400)
+    snap = made.snapshot()
+    assert snap["policy"] == "policy_terrain"
+    assert snap["status"] == "reached", snap["failure"]
+
+
+def test_session_rejects_an_unknown_observation_version() -> None:
+    scripted = demo.load_controller("scripted")
+    future = demo.Controller("future", scripted.policy, obs_version=99)
+    with pytest.raises(ValueError, match="observation version 99"):
+        demo.DemoSession(future)
