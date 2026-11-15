@@ -32,7 +32,18 @@ done
 """
 
 
-def fakes(tmp_path: Path, rsync_body: str = RSYNC_OK) -> dict[str, str]:
+HCLOUD_OFFLINE = """
+if [ "$1 $2" = "server ip" ]; then echo 127.0.0.1; fi
+if [ "$1 $2" = "server describe" ]; then echo "hcloud: network unreachable" >&2; exit 1; fi
+"""
+SSH_DOWN = 'case "$*" in *status.sh*) exit 255;; esac; cat > /dev/null || true'
+HCLOUD_GONE = """
+if [ "$1 $2" = "server ip" ]; then echo 127.0.0.1; fi
+if [ "$1 $2" = "server describe" ]; then echo "hcloud: server not found: $3" >&2; exit 1; fi
+"""
+
+
+def fakes(tmp_path: Path, rsync_body: str = RSYNC_OK, **bodies_over: str) -> dict[str, str]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     bodies = {
@@ -42,6 +53,7 @@ def fakes(tmp_path: Path, rsync_body: str = RSYNC_OK) -> dict[str, str]:
         "curl": 'case "$*" in *metadata*) echo 4242;; esac; cat > /dev/null || true',
         "sleep": "",
     }
+    bodies.update(bodies_over)
     for name, body in bodies.items():
         path = bin_dir / name
         path.write_text(FAKE.format(name=name, body=body))
@@ -199,3 +211,27 @@ def test_run_remote_can_attach_to_a_server_that_already_trains(tmp_path: Path) -
     order = positions(calls, "status.sh", "rsync", "hcloud server delete worm-train-x")
     assert order == sorted(order)
     assert "Server worm-train-x: deleted." in done.stdout
+
+
+@needs_git
+def test_run_remote_stops_polling_when_the_server_is_gone(tmp_path: Path) -> None:
+    env = fakes(tmp_path, ssh=SSH_DOWN, hcloud=HCLOUD_GONE)
+    done = run_remote(env, tmp_path, "--poll-seconds", "0", "--server", "worm-train-x")
+    assert done.returncode != 0
+    assert "no longer exists" in done.stdout + done.stderr
+    calls = (tmp_path / "calls.log").read_text()
+    assert "rsync" not in calls and "server delete" not in calls
+    assert "NOT deleted" not in done.stdout + done.stderr
+
+
+@needs_git
+def test_run_remote_gives_up_after_repeated_status_failures(tmp_path: Path) -> None:
+    # The network is down: ssh and hcloud both fail. That is not proof that the server is gone.
+    env = fakes(tmp_path, ssh=SSH_DOWN, hcloud=HCLOUD_OFFLINE)
+    done = run_remote(
+        env, tmp_path, "--poll-seconds", "0", "--server", "worm-train-x", "--max-poll-failures", "3"
+    )
+    assert done.returncode != 0
+    calls = (tmp_path / "calls.log").read_text()
+    assert calls.count("status.sh") == 3 and "server delete" not in calls
+    assert "NOT deleted" in done.stdout + done.stderr
