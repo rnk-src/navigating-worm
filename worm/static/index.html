@@ -55,6 +55,7 @@
     min-height: 36px; padding: 6px 12px; font: 700 14px/1 var(--body); color: var(--ink);
     background: var(--chip); border: 2px solid var(--line); cursor: pointer;
     transition: border-color 0.15s, color 0.15s, background-color 0.15s; }
+  a.btn { text-decoration: none; }
   .btn:hover:not(:disabled) { border-color: var(--line-strong); color: var(--accent-bright); }
   .btn:active:not(:disabled) { background: var(--line); }
   .btn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-bright); }
@@ -161,7 +162,7 @@
 
 
   /* Narrow gutters or a narrow stacked frame: the two buttons keep only their icons. */
-  @container (max-width: 170px) { .buttons { flex-direction: row; } .buttons .label { display: none; } .buttons .btn { padding: 6px; min-width: 36px; } }
+  @container (max-width: 170px) { .buttons { flex-direction: row; flex-wrap: wrap; } .buttons .label { display: none; } .buttons .btn { padding: 6px; min-width: 36px; } }
   @container (max-width: 480px) { .app[data-layout="tall"] .buttons .label { display: none; } .app[data-layout="tall"] .buttons .btn { padding: 6px; min-width: 36px; } }
   .app[data-layout="tall"] .readout { display: flex; flex-wrap: wrap; gap: 2px 16px; }
   .app[data-layout="tall"] .readout div { gap: 6px; }
@@ -279,6 +280,14 @@
         <svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path d="M0 1h8v1H0zM1 0h2v3H1zM0 5h8v1H0zM5 4h2v3H5z"/></svg>
         <span class="label">Map settings</span>
       </button>
+      <button class="btn" id="full-toggle" type="button" aria-label="Full screen" title="Full screen" hidden>
+        <svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path d="M4 0h4v3H7V1H4zM0 5h1v2h2v1H0zM6 1h1v1H6zM5 2h1v1H5zM4 3h1v1H4zM3 4h1v1H3zM2 5h1v1H2zM1 6h1v1H1z"/></svg>
+        <span class="label">Full screen</span>
+      </button>
+      <a class="btn" id="own-page" target="_blank" rel="noopener" aria-label="Open in its own page" title="Open in its own page" hidden>
+        <svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path d="M4 0h4v3H7V1H4zM6 1h1v1H6zM5 2h1v1H5zM4 3h1v1H4zM3 4h1v1H3zM2 5h1v1H2zM1 6h1v1H1zM0 7h1v1H0z"/></svg>
+        <span class="label">Open in its own page</span>
+      </a>
     </div>
     </div>
   </div>
@@ -521,6 +530,21 @@ function setSpeed(value) {
 document.querySelectorAll("[data-speed]").forEach((b) => b.addEventListener("click", async () => {
   const value = Number(b.dataset.speed); setSpeed(value); await api.control({speed: value});
 }));
+
+// Full screen and a page of its own. The second shows only inside a frame, such as a project card.
+const fullBtn = $("full-toggle");
+if (document.fullscreenEnabled) {
+  fullBtn.hidden = false;
+  fullBtn.addEventListener("click", () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen();
+  });
+}
+if (window.parent !== window) {
+  const own = $("own-page");
+  own.href = location.href;
+  own.hidden = false;
+}
 
 $("cam-toggle").addEventListener("click", () => {
   if (!camAvailable) return;
