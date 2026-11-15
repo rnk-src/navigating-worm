@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
 import shutil
 import signal
 import subprocess
@@ -184,6 +185,10 @@ class AdaptiveLevel:
 
 def make_env(cfg: TrainConfig) -> Monitor:
     """Return one monitored training env of `cfg`."""
+    if multiprocessing.parent_process() is not None:
+        # An env worker. Ctrl-C reaches the whole process group; only the trainer may
+        # react, so that it can save a checkpoint while the workers still answer.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
     world = None
     if cfg.env.world == "curriculum":
         world = WorldCurriculum(
