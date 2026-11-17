@@ -78,3 +78,12 @@ export function smoothPoint(
 export function heading(tail: ArrayLike<number>, head: ArrayLike<number>): number {
   return Math.atan2(head[1] - tail[1], head[0] - tail[0]);
 }
+
+/** Numbers overlapping async runs, so a slow older run can tell that a newer one replaced it. */
+export function latestRun() {
+  let newest = 0;
+  return {
+    start: (): number => ++newest,
+    isCurrent: (run: number): boolean => run === newest,
+  };
+}

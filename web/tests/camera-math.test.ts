@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { followPose, heading, smoothAngle, smoothPoint, terrainGrid } from '../src/camera-math';
+import { followPose, heading, latestRun, smoothAngle, smoothPoint, terrainGrid } from '../src/camera-math';
 
 test('terrainGrid places each vertex by row, column and height', () => {
   const g = terrainGrid(new Float32Array([0, 0.5, 1, 0, 0, 0.25]), 2, 3, [-1, 1, -2, 2], 0.4);
@@ -48,4 +48,12 @@ test('heading points from the tail to the head', () => {
 test('smoothPoint eases each coordinate', () => {
   const p = smoothPoint([0, 0, 0], [1, 2, 3], 1, 1);
   expect(p[1]).toBeCloseTo(2 * (1 - Math.exp(-1)), 6);
+});
+
+test('latestRun marks every run but the newest as stale', () => {
+  const runs = latestRun();
+  const first = runs.start();
+  const second = runs.start();
+  expect(runs.isCurrent(first)).toBe(false);
+  expect(runs.isCurrent(second)).toBe(true);
 });

@@ -2,7 +2,7 @@
 // loads only when the cam is first switched on.
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { BrowserApi } from './api';
-import { followPose, heading, smoothAngle, smoothPoint, terrainGrid } from './camera-math';
+import { followPose, heading, latestRun, smoothAngle, smoothPoint, terrainGrid } from './camera-math';
 import type { Engine } from './engine';
 
 // The camera eases toward the worm slowly, so the body's wiggle does not shake the view.
@@ -54,7 +54,9 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
       segs = [];
     }
 
+    const builds = latestRun();
     async function rebuild(engine: Engine): Promise<void> {
+      const build = builds.start();
       disposeWorld();
       sim = [...engine.sims].reverse().find((s) => s.dims().nhfield === 1) ?? null;
       if (!sim) return;
@@ -69,6 +71,12 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
       geometry.setIndex(new THREE.BufferAttribute(grid.indices, 1));
       geometry.computeVertexNormals();
       const texture = await new THREE.TextureLoader().loadAsync(api.mapImageUrl(info.map_id));
+      if (!builds.isCurrent(build)) {
+        // A newer map started while the texture loaded. Drop this one.
+        geometry.dispose();
+        texture.dispose();
+        return;
+      }
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.magFilter = THREE.NearestFilter;
       terrain = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ map: texture }));
@@ -97,19 +105,26 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
     let eased: { yaw: number; at: [number, number, number] } | null = null;
     let raf = 0;
     let alive = true;
+    let drewPaused = false;
     function frame(t: number): void {
       if (!alive) return;
       raf = requestAnimationFrame(frame);
       const engine = getEngine();
       if (!engine) return;
-      const current = engine.mapInfo().map_id;
+      const current = engine.mapId;
       if (current !== mapId) {
         mapId = current; // block repeats while the async rebuild runs
         eased = null;
+        drewPaused = false;
         void rebuild(engine);
         return;
       }
       if (!sim || !segs.length) return;
+      // While paused nothing moves: draw once, then idle until the run resumes.
+      if (api.paused) {
+        if (drewPaused) return;
+        drewPaused = true;
+      } else drewPaused = false;
       const xpos = sim.data.xpos;
       const xmat = sim.data.xmat;
       const q = new THREE.Matrix4();
@@ -166,7 +181,13 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
         cancelled = true;
         release?.();
       };
-      void start(container).then((r) => (cancelled ? r() : (release = r)));
+      start(container).then(
+        (r) => (cancelled ? r() : (release = r)),
+        () => {
+          // Most often no WebGL. The simulation itself still runs.
+          if (!cancelled) container.textContent = 'The follow cam needs WebGL, which this browser does not offer.';
+        },
+      );
     },
     unmount(): void {
       stop?.();
