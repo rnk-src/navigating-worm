@@ -214,3 +214,15 @@ def test_nav_result_accounts_time_per_terrain_class() -> None:
     assert sum(result.class_seconds) == pytest.approx(result.sim_seconds)
     assert result.sim_seconds == pytest.approx(len(result.trajectory) * 0.05)
     assert result.replans == 0
+
+
+def test_navigator_drives_a_plan_it_did_not_make() -> None:
+    _, planning = walled_navigator()
+    shared = planning.go(BEHIND_WALL)
+    assert isinstance(shared, planner.Plan)
+    env, nav = walled_navigator()
+    result = nav.go(BEHIND_WALL, plan=shared)
+    assert result is shared and nav.plan is shared and nav.status == "driving"
+    run(nav)
+    assert nav.status == "reached"
+    assert np.linalg.norm(env.head_xy - BEHIND_WALL) < 0.15

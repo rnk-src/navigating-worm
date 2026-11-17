@@ -178,13 +178,15 @@ class Navigator:
         """Return the number of waypoints of the current plan reached so far."""
         return 0 if self._follower is None else self._follower.reached
 
-    def go(self, goal: ArrayLike) -> Plan | Infeasible:
+    def go(self, goal: ArrayLike, plan: Plan | None = None) -> Plan | Infeasible:
         """Plan from the current head position to `goal` and start driving.
 
+        Pass `plan` to drive a route planned elsewhere, such as one shared by several
+        racers. Replans still use this navigator's own cost map.
         An infeasible goal changes nothing: a drive in progress continues.
         """
         target = np.asarray(goal, dtype=np.float64)
-        result = planner.plan(self._costmap, self._env.head_xy, target)
+        result = planner.plan(self._costmap, self._env.head_xy, target) if plan is None else plan
         if isinstance(result, Infeasible):
             return result
         self._goal = target
