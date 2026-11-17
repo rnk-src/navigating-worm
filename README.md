@@ -81,7 +81,20 @@ With the committed policy, the navigator reached 10 of 10 goals on ten generated
 uv run python scripts/demo.py --open
 ```
 
-The page shows a top-down map. Click a point and the worm plans a route and drives it. A click on a rock shows why the goal is refused. A click while the worm drives re-routes it. The sliders make a new map, change the speed and pause the run. The demo drives the terrain policy in `results/policy_terrain` by default. Use `--policy results/policy` for the flat policy, `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
+The page is a map with its controls in the gutters. Click a point and the worm plans a route and drives it. A small card at the click shows the route length, or why the goal is refused. A click while the worm drives re-routes it. Keyboard users move a cursor with the arrow keys and press Enter. Pause and the speed presets sit beside the map. The follow-cam inset appears when the server renders. The Map settings drawer makes a new map: seed, size, ground mix, slope, rocks and ditches. The page uses the Atkinson Hyperlegible font from `worm/static/fonts/` (SIL Open Font License). The demo drives the terrain policy in `results/policy_terrain` by default. Use `--policy results/policy` for the flat policy, `--policy scripted` for the scripted controller and `--no-render` to skip the 3D view. The server listens on localhost only.
+
+### Run it in the browser
+The same page also runs with no server. The worm's Python runs in Pyodide, on MuJoCo compiled to WebAssembly. A JavaScript loop runs the physics substeps. The browser engine stays within 1 to 4 cm of native MuJoCo over 240 control steps. It needs the network for Pyodide and numpy, which load from jsDelivr.
+
+```
+cd web
+npm ci
+npm run dev        # dev server
+npm run build      # builds web/dist, a static site
+npm run check      # types, tests and build
+```
+
+`npm run build` builds the `worm` wheel with `uv build`, copies the Python glue, the exported policy (`scripts/export_policy.py` rebuilds it) and the fonts, then runs Vite. The engine test needs the network. `web/src/physics.ts` ports `TerrainResistive.apply`. Change both together. The follow cam in the browser build uses three.js.
 
 ## Train the terrain policy
 The terrain policy takes observation v2: the 24 inputs of v1 plus the terrain class 0.25 m ahead (3) and four ground heights ahead of the head (4), 31 in total. Both additions model real sensors, with classifier errors and range noise. It trains on a curriculum of 8 m worlds: level ground of one class, then mixed surfaces, then hills and roughness, then steeper hills with shallow ditches and rocks. No rock sits on the line to the target, because the planner owns obstacle avoidance. Each saved run has a `meta.json` with its observation version, so old policies keep loading.

@@ -17,6 +17,11 @@ from urllib.parse import parse_qs, urlparse
 from worm.demo import DemoSession, MapRequest
 
 STATIC_DIR = Path(__file__).parent / "static"
+# The only static files besides the page. A fixed list means a path can never leave the folder.
+FONTS = {
+    "atkinson-hyperlegible-400.woff2": STATIC_DIR / "fonts" / "atkinson-hyperlegible-400.woff2",
+    "atkinson-hyperlegible-700.woff2": STATIC_DIR / "fonts" / "atkinson-hyperlegible-700.woff2",
+}
 SPEED_RANGE = (1.0, 20.0)  # sim seconds per wall second
 _MAX_BODY = 64 * 1024  # bytes
 _CALL_TIMEOUT = 30.0  # s
@@ -168,6 +173,9 @@ class _Handler(BaseHTTPRequestHandler):
             if url.path == "/":
                 page = (STATIC_DIR / "index.html").read_bytes()
                 self._send(200, "text/html; charset=utf-8", page)
+            elif url.path.startswith("/fonts/") and url.path[len("/fonts/") :] in FONTS:
+                font = FONTS[url.path[len("/fonts/") :]]
+                self._send(200, "font/woff2", font.read_bytes())
             elif url.path == "/api/state":
                 self._json(200, loop.latest())
             elif url.path == "/api/map.png":

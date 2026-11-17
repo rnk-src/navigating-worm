@@ -497,3 +497,19 @@ def test_world_render_shows_class_colours(rendering: None) -> None:
     assert g > r + 30 and g > b + 30  # grass green
     r, g, b = colour(-1.0, -1.0)
     assert abs(r - g) < 20 and abs(g - b) < 20  # stone grey
+
+
+def test_step_runs_its_substeps_through_the_advance_hook() -> None:
+    """A host that owns the physics loop, such as the browser, replaces `_advance`."""
+    calls: list[tuple[int, int]] = []
+
+    class Hosted(WormGoalEnv):
+        def _advance(self, start: np.ndarray, applied: np.ndarray) -> None:  # type: ignore[type-arg]
+            calls.append((start.shape[0], applied.shape[0]))
+            super()._advance(start, applied)
+
+    env = Hosted()
+    env.reset(seed=0)
+    env.step(np.zeros(env.action_space.shape, dtype=np.float32))
+    env.step(np.zeros(env.action_space.shape, dtype=np.float32))
+    assert calls == [(env.spec_.n_joints, env.spec_.n_joints)] * 2
