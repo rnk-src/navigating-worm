@@ -66,9 +66,24 @@ def test_load_config_parses_every_section_and_rejects_unknown_keys(tmp_path: Pat
 
 def test_every_committed_config_loads() -> None:
     names = {load_config(path).run.name for path in CONFIGS.glob("*.toml")}
-    assert names == {"m1_flat", "terrain_v2", "terrain_v2_sanity", "terrain_v2_smoke"}
+    assert names == {
+        "m1_flat",
+        "terrain_v2",
+        "terrain_v2_race",
+        "terrain_v2_sanity",
+        "terrain_v2_smoke",
+    }
     flat = load_config(CONFIGS / "m1_flat.toml")
     assert flat.env.world == "flat" and flat.env.obs_version == 1 and flat.run.steps == 3_000_000
+
+
+def test_race_config_is_terrain_v2_keeping_every_checkpoint() -> None:
+    base = load_config(CONFIGS / "terrain_v2.toml")
+    race = load_config(CONFIGS / "terrain_v2_race.toml")
+    assert race.checkpoint == replace(base.checkpoint, keep=0, save_initial=True)
+    assert race == replace(
+        base, run=replace(base.run, name="terrain_v2_race"), checkpoint=race.checkpoint
+    )
 
 
 def test_level_follows_the_timestep_boundaries() -> None:
@@ -217,3 +232,12 @@ def test_ctrl_c_on_the_process_group_saves_a_checkpoint_with_env_workers(tmp_pat
     assert state["done"] is False
     assert state["last_checkpoint"] == f"step_{state['steps']}"
     assert (out / "checkpoints" / f"{state['last_checkpoint']}.zip").exists()
+
+
+def test_save_initial_writes_an_untrained_step_0_checkpoint(tmp_path: Path) -> None:
+    cfg = smoke(steps=512, every=256, keep=0)
+    cfg = replace(cfg, checkpoint=replace(cfg.checkpoint, save_initial=True))
+    train(cfg, tmp_path)
+    names = sorted(path.name for path in (tmp_path / "checkpoints").glob("step_*.zip"))
+    assert names == ["step_0.zip", "step_256.zip", "step_512.zip"]
+    assert (tmp_path / "checkpoints" / "step_0_vecnormalize.pkl").exists()

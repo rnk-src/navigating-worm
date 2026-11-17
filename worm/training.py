@@ -82,6 +82,7 @@ class PPOConfig:
 class CheckpointConfig:
     every_steps: int = 0  # 0 saves no checkpoint during the run
     keep: int = 3  # 0 keeps every checkpoint
+    save_initial: bool = False  # also save the untrained model as step_0
 
 
 @dataclass(frozen=True)
@@ -352,6 +353,8 @@ class CheckpointCallback(BaseCallback):  # type: ignore[misc]
     def _on_training_start(self) -> None:
         every = self._run.cfg.checkpoint.every_steps
         self._next = (self.num_timesteps // every + 1) * every if every > 0 else 0
+        if self._run.cfg.checkpoint.save_initial and self.num_timesteps == 0:
+            self._run.checkpoint(done=False)
 
     def _on_step(self) -> bool:
         if self._next and self.num_timesteps >= self._next:

@@ -1,0 +1,38 @@
+# Terrain-aware policy: obs v2 on the world curriculum.
+
+[run]
+name = "terrain_v2_race"
+steps = 20_000_000
+n_envs = 16
+seed = 0
+
+[env]
+obs_version = 2
+world = "curriculum"
+world_size = 8.0
+cell = 0.05
+randomizer_level = 1.0
+
+[curriculum]
+mode = "timesteps"
+boundaries = [0.0, 0.15, 0.35, 0.6]
+replay_lower = 0.3
+
+[ppo]
+n_steps = 1024
+batch_size = 4096
+n_epochs = 10
+gamma = 0.99
+learning_rate = 3e-4
+net_arch = [64, 64]
+log_std_init = -1.0
+
+[checkpoint]
+every_steps = 1_000_000
+keep = 0
+save_initial = true
+
+[eval]
+every_steps = 2_000_000
+maps = 5
+map_size = 10.0
