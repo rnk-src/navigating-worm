@@ -123,7 +123,7 @@ A run writes checkpoints every 1M steps and keeps the newest three. SIGTERM save
 `eval_terrain.py` drives one planned route of at least 5 m on each of 50 generated 10 m worlds per level. Level 1 is level ground with mixed surfaces. Level 2 adds hills up to 10 degrees and roughness. Level 3 is the full terrain: hills up to 18 degrees, rocks and ditches.
 
 ### Result
-Training seed 0, 20M steps, about 2 h 25 min on a 12-core laptop CPU with 8 envs. The policy is in `results/policy_terrain`. "Flat policy" is the committed M1 policy in `results/policy` (observation v1), on the same 50 worlds and routes per level.
+Training seed 0, 20M steps, about 2 h 25 min on a 12-core laptop CPU with 8 envs. The tables below describe this first seed-0 run. `results/policy_terrain` now holds the race run instead (see "Race run"). "Flat policy" is the committed M1 policy in `results/policy` (observation v1), on the same 50 worlds and routes per level.
 
 | Level | Flat policy (v1) | Terrain policy (v2), seed 0 | Seed 1 | Seed 2 |
 |---|---|---|---|---|
@@ -162,6 +162,18 @@ Notes:
 - Seeds 1 and 2 pass the same gate. Seed 1 gains only 2 points on level 3 and passes by sand speed (39 % faster).
 - All three seeds, and the flat policy, fail the route on world 2013 of level 3.
 - Each terrain policy lost one flat 100 m route that the flat policy completes.
+
+### Race run
+The race run trains seed 0 again with `configs/terrain_v2_race.toml`. It keeps every 1M-step checkpoint from step 0, for the demo's checkpoint race. Its 20M-step policy is the demo policy in `results/policy_terrain`. Five checkpoints are in `results/race/step_<N>/`. The eval is the same: 50 worlds per level, seed 2000. Source: `results/terrain_eval_race_seed0.json`.
+
+| Level 3 | Hand-coded gait | Flat policy (v1) | Race run, 20M |
+|---|---|---|---|
+| Speed on concrete | 0.051 m/s | 0.115 m/s | 0.152 m/s (+33 %) |
+| Speed on grass | 0.037 m/s | 0.093 m/s | 0.125 m/s (+34 %) |
+| Speed on sand | 0.032 m/s | 0.071 m/s | 0.098 m/s (+38 %) |
+| Routes completed | 39 / 50 | 46 / 50 | 48 / 50 |
+
+Percentages are gains over the flat policy. The race run averages 3.2 times the gait's speed (mean of the three surface ratios). It completes all 150 terrain routes on levels 1 and 2, and 50 / 50 flat 100 m routes. It is a little slower than the first seed-0 run on concrete (0.152 against 0.165 m/s).
 - The tables are in `results/terrain_eval_seed{0,1,2}.json` and `results/terrain_eval_baseline_v1.json`.
 
 ## Roadmap
