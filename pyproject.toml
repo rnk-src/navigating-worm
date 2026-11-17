@@ -13,10 +13,20 @@ dependencies = [
     "numpy>=2.4.6",
     "stable-baselines3>=2.9,<3",
     "tensorboard>=2.21.0",
+    "torch>=2.15",
 ]
 
 [dependency-groups]
 dev = ["ruff>=0.8", "mypy>=1.13", "pytest>=8"]
+
+# Training runs on CPU only. The CPU wheels skip about 3 GB of CUDA libraries on Linux.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["hatchling"]

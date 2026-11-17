@@ -1,0 +1,16 @@
+.venv/
+**/__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+runs/
+checkpoints/
+docs/
+web/node_modules/
+web/dist/
+*.log
+.DS_Store
+.claude/
+CLAUDE.local.md
+PROGRESS.md
+IMPROVEMENTS_NOTE.md
