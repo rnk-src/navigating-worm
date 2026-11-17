@@ -165,6 +165,7 @@ Install [uv](https://docs.astral.sh/uv/), then:
 
 ```
 make check                                   # format, lint, types, tests
+make docker-check                            # same check in a CPU-only Linux image
 uv run python scripts/train.py --out runs/ppo
 uv run python scripts/eval_route.py --policy results/policy --video route.mp4
 uv run python scripts/showcase.py            # writes results/showcase.mp4
