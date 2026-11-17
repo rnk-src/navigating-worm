@@ -35,3 +35,15 @@ test('the browser engine drives the same map and goal as the native run', { time
     expect(miss).toBeLessThan(0.1);
   }
 });
+
+test('a refused map keeps the current map, its sims and its id', { timeout: 240_000 }, async (ctx) => {
+  if (!online) return ctx.skip();
+  const first = engine.newMap(native.request);
+  expect(first.ok).toBe(true);
+  const sims = engine.sims.length;
+  expect(engine.mapId).toBe(first.map_id);
+  const refused = engine.newMap({ ...native.request, mix: [0, 0, 0] });
+  expect(refused.ok).toBe(false);
+  expect(engine.sims.length).toBe(sims);
+  expect(engine.mapId).toBe(first.map_id);
+});

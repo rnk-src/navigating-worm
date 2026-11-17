@@ -98,9 +98,16 @@ export class Engine {
     this.sims.push(sim);
   }
 
+  /** Id of the current map, kept here so callers need no Python call per frame. -1 before the first map. */
+  mapId = -1;
+
   newMap(request: MapRequest): { ok: boolean; map_id?: number; error?: string } {
-    this.sims = [];
-    return JSON.parse(this.demo.new_map(JSON.stringify(request)));
+    const previous = this.sims;
+    this.sims = []; // the new map's sims register themselves during the call
+    const result = JSON.parse(this.demo.new_map(JSON.stringify(request)));
+    if (result.ok) this.mapId = result.map_id;
+    else this.sims = previous; // a refused map leaves the old one running
+    return result;
   }
   mapInfo(): MapInfo {
     return JSON.parse(this.demo.map_info());
