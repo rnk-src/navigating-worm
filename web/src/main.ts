@@ -18,7 +18,10 @@ let engine: Engine | null = null;
 // The page checks api.camera once at start-up, so set it now. three.js loads when the cam opens.
 api.camera = createFollowCam(api, () => engine);
 window.wormApi = api;
-window.addEventListener('message', (e) => api.hostMessage(e.data));
+// Only the page that frames this demo may pause it.
+window.addEventListener('message', (e) => {
+  if (e.source === window.parent) api.hostMessage(e.data);
+});
 
 async function bytes(url: string): Promise<Uint8Array> {
   const res = await fetch(url);

@@ -50,6 +50,7 @@ export class BrowserApi {
   camera?: { mount(container: HTMLElement): void; unmount(): void };
 
   private resolveReady!: () => void;
+  private rejectReady!: (error: Error) => void;
   private listeners: Array<(b: BootState) => void> = [];
   private userPaused = false;
   private hostPaused = false;
@@ -61,7 +62,11 @@ export class BrowserApi {
   constructor(options: ApiOptions = {}) {
     this.now = options.now ?? (() => performance.now());
     this.makeImageUrl = options.makeImageUrl ?? canvasImageUrl;
-    this.ready = new Promise((resolve) => (this.resolveReady = resolve));
+    this.ready = new Promise((resolve, reject) => {
+      this.resolveReady = resolve;
+      this.rejectReady = reject;
+    });
+    this.ready.catch(() => {}); // the start-up panel reports the error; no unhandled rejection
   }
 
   private setBoot(state: BootState['state'], message: string): void {
@@ -74,6 +79,12 @@ export class BrowserApi {
   }
   fail(message: string): void {
     this.setBoot('error', message);
+    this.rejectReady(new Error(message));
+  }
+
+  /** True while the host or the user has paused the simulation. */
+  get paused(): boolean {
+    return this.userPaused || this.hostPaused;
   }
 
   /** Hands over the booted engine, starts on the default map and opens the page. */

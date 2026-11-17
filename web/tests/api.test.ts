@@ -120,3 +120,20 @@ test('newMap passes the request through and mapImageUrl returns the blob url', a
   expect(maps.at(-1)).toEqual(req);
   expect(api.mapImageUrl(1)).toBe('blob:map');
 });
+
+test('a failed start rejects ready', async () => {
+  const api = makeApi();
+  api.fail('CDN blocked');
+  await expect(api.ready).rejects.toThrow('CDN blocked');
+});
+
+test('paused reports a pause from the host or the user', () => {
+  const { engine } = fakeEngine();
+  const api = makeApi();
+  api.attach(engine);
+  expect(api.paused).toBe(false);
+  api.hostMessage('pause');
+  expect(api.paused).toBe(true);
+  api.hostMessage('resume');
+  expect(api.paused).toBe(false);
+});
