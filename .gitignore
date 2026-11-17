@@ -14,3 +14,10 @@ runs/
 
 # Local planning notes
 docs/
+
+# Browser demo build output
+web/node_modules/
+web/dist/
+web/public/
+web/index.html
+web/.wheel-*/
