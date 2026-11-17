@@ -28,10 +28,10 @@
     {
       "step": 20,
       "head": [
-        0.173,
-        0.011
+        0.182,
+        -0.06
       ],
-      "yaw": -0.014,
+      "yaw": -0.434,
       "status": "driving",
       "reached": 0,
       "sim_time": 1.0
@@ -39,10 +39,10 @@
     {
       "step": 60,
       "head": [
-        0.788,
-        0.007
+        0.772,
+        -0.096
       ],
-      "yaw": -0.213,
+      "yaw": -0.328,
       "status": "driving",
       "reached": 1,
       "sim_time": 3.0
@@ -50,10 +50,10 @@
     {
       "step": 120,
       "head": [
-        1.364,
-        0.14
+        1.281,
+        -0.029
       ],
-      "yaw": 0.639,
+      "yaw": 1.266,
       "status": "driving",
       "reached": 1,
       "sim_time": 6.0
@@ -61,10 +61,10 @@
     {
       "step": 240,
       "head": [
-        2.028,
-        0.309
+        1.995,
+        0.136
       ],
-      "yaw": 2.24,
+      "yaw": -0.66,
       "status": "driving",
       "reached": 3,
       "sim_time": 12.0
