@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from collections.abc import Callable
@@ -20,9 +21,12 @@ def rendering() -> None:
     """Skip the test when this machine cannot render.
 
     A missing GL backend aborts the interpreter, so the probe runs in a subprocess.
+    Set WORM_REQUIRE_RENDER=1 (CI does) to fail instead of skip.
     """
     probe = subprocess.run([sys.executable, "-c", _PROBE], capture_output=True, timeout=120)
     if probe.returncode != 0:
+        if os.environ.get("WORM_REQUIRE_RENDER") == "1":
+            pytest.fail("rendering unavailable: " + probe.stderr.decode(errors="replace")[-2000:])
         pytest.skip("rendering unavailable on this machine")
 
 

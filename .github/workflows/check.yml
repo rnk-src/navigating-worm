@@ -11,4 +11,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      # EGL lets MuJoCo render headless, so the render tests run instead of skip.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libegl1 libosmesa6
       - run: make check
+        env:
+          MUJOCO_GL: egl
+          WORM_REQUIRE_RENDER: "1"
