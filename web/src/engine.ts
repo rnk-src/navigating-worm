@@ -10,6 +10,7 @@ export interface BootOptions {
   gymnasiumPy: string; // text of py/gymnasium.py
   browserPy: string; // text of py/browser.py
   policy: string; // text of policy.json
+  racers?: string; // JSON [{label, policy}]; set, it boots a race and `policy` is unused
   onProgress?: (message: string) => void;
 }
 
@@ -50,6 +51,17 @@ export interface Snapshot {
   replans: number;
   surface: string;
   sim_time: number;
+  bodies?: RaceBody[]; // a race only; the first is the leader above
+  race_over?: boolean;
+}
+
+export interface RaceBody {
+  label: string;
+  segs: number[][];
+  yaw: number;
+  trail: number[][];
+  done: boolean;
+  t_finish: number | null; // sim seconds; null until it arrives, and for a DNF
 }
 
 export class Engine {
@@ -85,8 +97,8 @@ export class Engine {
 
     say('Starting the simulation');
     py.runPython(o.browserPy);
-    const make = py.globals.get('make_demo');
-    const demo = make(o.policy);
+    const make = py.globals.get(o.racers ? 'make_race' : 'make_demo');
+    const demo = make(o.racers ?? o.policy);
     make.destroy();
     const dt = demo.control_dt as number;
     const created = new Engine(demo, dt);

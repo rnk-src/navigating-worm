@@ -28,7 +28,7 @@ export function buildWheel(): Uint8Array {
   return new Uint8Array(fs.readFileSync(path.join(out, file)));
 }
 
-export async function bootEngine(wheel: Uint8Array): Promise<Engine> {
+export async function bootEngine(wheel: Uint8Array, racers?: { label: string; policy: unknown }[]): Promise<Engine> {
   const mj = await load_mujoco();
   // The core comes from the npm package. Only the numpy wheel comes from the CDN, at the same version.
   const pyodide = await loadPyodide({ indexURL: path.join(here, '../node_modules/pyodide') });
@@ -43,5 +43,6 @@ export async function bootEngine(wheel: Uint8Array): Promise<Engine> {
     gymnasiumPy: py('gymnasium.py'),
     browserPy: py('browser.py'),
     policy: fs.readFileSync(path.join(root, 'results/policy_terrain/policy.json'), 'utf8'),
+    racers: racers && JSON.stringify(racers),
   });
 }

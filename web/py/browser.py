@@ -14,7 +14,7 @@ import numpy as np
 from pyodide.ffi import to_js
 
 from worm import friction, mapviz, npolicy
-from worm.demo import Controller, DemoSession, MapRequest
+from worm.demo import Controller, DemoSession, MapRequest, RaceSession, load_controller
 from worm.env import WormGoalEnv
 from worm.spec import WormSpec
 
@@ -74,12 +74,10 @@ WormGoalEnv._advance = _browser_advance  # type: ignore[method-assign]
 
 
 class BrowserDemo:
-    """One `DemoSession` with JSON in and JSON out."""
+    """One `DemoSession` or `RaceSession` with JSON in and JSON out."""
 
-    def __init__(self, policy_json: str) -> None:
-        policy = npolicy.NumpyPolicy.from_dict(json.loads(policy_json))
-        controller = Controller("policy_terrain", policy, policy.obs_version)
-        self._session = DemoSession(controller)
+    def __init__(self, session: DemoSession | RaceSession) -> None:
+        self._session = session
 
     def new_map(self, request_json: str) -> str:
         try:
@@ -111,5 +109,21 @@ class BrowserDemo:
         return WormSpec().control_dt
 
 
+def _controller(label: str, policy: object) -> Controller:
+    if policy == "scripted":
+        return Controller(label, load_controller("scripted").policy, 1)
+    loaded = npolicy.NumpyPolicy.from_dict(policy)  # type: ignore[arg-type]
+    return Controller(label, loaded, loaded.obs_version)
+
+
 def make_demo(policy_json: str) -> BrowserDemo:
-    return BrowserDemo(policy_json)
+    return BrowserDemo(DemoSession(_controller("policy_terrain", json.loads(policy_json))))
+
+
+def make_race(racers_json: str) -> BrowserDemo:
+    """Build a race from `[{label, policy}]`. `policy` is a policy dict or "scripted".
+
+    The first racer leads: the snapshot keeps its single-body fields.
+    """
+    racers = [_controller(r["label"], r["policy"]) for r in json.loads(racers_json)]
+    return BrowserDemo(RaceSession(racers))

@@ -2,17 +2,19 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { beforeAll, expect, test } from 'vitest';
 import type { Engine } from '../src/engine';
-import { bootEngine, buildWheel, cdnReachable } from './helpers';
+import { bootEngine, buildWheel, cdnReachable, root } from './helpers';
 
 const here = path.dirname(new URL(import.meta.url).pathname);
 const native = JSON.parse(fs.readFileSync(path.join(here, 'fixtures/native-run.json'), 'utf8'));
 let engine: Engine;
+let wheel: Uint8Array;
 let online = false;
 
 beforeAll(async () => {
   online = await cdnReachable();
   if (!online) return;
-  engine = await bootEngine(buildWheel());
+  wheel = buildWheel();
+  engine = await bootEngine(wheel);
 }, 240_000);
 
 test('the browser engine drives the same map and goal as the native run', { timeout: 240_000 }, async (ctx) => {
@@ -46,4 +48,22 @@ test('a refused map keeps the current map, its sims and its id', { timeout: 240_
   expect(refused.ok).toBe(false);
   expect(engine.sims.length).toBe(sims);
   expect(engine.mapId).toBe(first.map_id);
+});
+
+test('a race engine steps every racer on one shared route', { timeout: 240_000 }, async (ctx) => {
+  if (!online) return ctx.skip();
+  const policy = (dir: string) => JSON.parse(fs.readFileSync(path.join(root, dir, 'policy.json'), 'utf8'));
+  const race = await bootEngine(wheel, [
+    { label: 'final', policy: policy('results/policy_terrain') },
+    { label: 'flat', policy: policy('results/policy') },
+    { label: 'scripted', policy: 'scripted' },
+  ]);
+  expect(race.newMap(native.request)).toMatchObject({ ok: true });
+  expect(race.sims.length).toBe(3);
+  expect(race.goal(native.goal[0], native.goal[1]).ok).toBe(true);
+  race.tick(40);
+  const snap = race.snapshot();
+  expect(snap.policy).toBe('final');
+  expect(snap.bodies?.map((b) => b.label)).toEqual(['final', 'flat', 'scripted']);
+  expect(snap.bodies?.every((b) => b.segs.length === snap.body.length && !b.done)).toBe(true);
 });
