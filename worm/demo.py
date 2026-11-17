@@ -157,11 +157,15 @@ class DemoSession:
     where the worm is. `tick` drives. `snapshot` returns everything a page needs to draw.
     """
 
-    def __init__(self, controller: Controller, render: bool = False) -> None:
+    def __init__(
+        self, controller: Controller, render: bool = False, nav_cfg: NavConfig | None = None
+    ) -> None:
         if not 1 <= controller.obs_version <= LATEST_OBS_VERSION:
             raise ValueError(f"observation version {controller.obs_version} is not supported")
         self._controller = controller
         self._render = render
+        self._nav_cfg = nav_cfg or NavConfig()
+        self._seed = 0
         self._map_id = 0
         self._env: WormGoalEnv | None = None
         self._nav: Navigator | None = None
@@ -193,8 +197,12 @@ class DemoSession:
 
     def new_map(self, req: MapRequest) -> None:
         """Generate a world and spawn the worm at its centre."""
-        # Build everything first, so a failure leaves the current map untouched.
         world = generate(req.to_config(), req.seed)
+        self.use_map(world, planner.build_costmap(world), req.seed)
+
+    def use_map(self, world: World, costmap: planner.CostMap, seed: int) -> None:
+        """Spawn the worm at the centre of a world built elsewhere, such as one shared by racers."""
+        # Build everything first, so a failure leaves the current map untouched.
         env = WormGoalEnv(
             world=world,
             episode_seconds=NavConfig().waypoint_timeout,
@@ -202,14 +210,13 @@ class DemoSession:
             obs_version=self._controller.obs_version,  # the policy decides its input
         )
         try:
-            env.reset(seed=req.seed, options={"start": (0.0, 0.0)})
-            costmap = planner.build_costmap(world)
+            env.reset(seed=seed, options={"start": (0.0, 0.0)})
         except Exception:
             env.close()
             raise
         self.close()
-        self._env, self._world, self._costmap = env, world, costmap
-        self._nav = Navigator(env, self._controller.policy, costmap)
+        self._env, self._world, self._costmap, self._seed = env, world, costmap, seed
+        self._nav = Navigator(env, self._controller.policy, costmap, self._nav_cfg)
         self._goal = None
         self._png = {}
         self._map_id += 1
@@ -219,10 +226,17 @@ class DemoSession:
             self._env.close()
             self._env = None
 
-    def goal(self, xy: tuple[float, float]) -> dict[str, Any]:
-        """Plan a route to `xy` from where the worm is. Return a JSON-able answer."""
+    def restart(self) -> None:
+        """Put the worm back at the spawn of the current map, exactly as `new_map` left it."""
+        env, _, _, costmap = self._parts()
+        env.reset(seed=self._seed, options={"start": (0.0, 0.0)})
+        self._nav = Navigator(env, self._controller.policy, costmap, self._nav_cfg)
+        self._goal = None
+
+    def goal(self, xy: tuple[float, float], plan: planner.Plan | None = None) -> dict[str, Any]:
+        """Plan a route to `xy` from the worm, or drive `plan`. Return a JSON-able answer."""
         _, nav, _, _ = self._parts()
-        result = nav.go(xy)
+        result = nav.go(xy, plan=plan)
         if isinstance(result, planner.Infeasible):
             return {"ok": False, "reason": result.reason.name, "detail": result.detail}
         self._goal = [float(result.path[-1][0]), float(result.path[-1][1])]
@@ -305,3 +319,89 @@ class DemoSession:
 
         encoded: bytes = imageio.imwrite("<bytes>", frame, format="jpg")
         return encoded
+
+
+class RaceSession:
+    """Several racers on one world, one route per goal, stepped in lockstep.
+
+    The first racer leads: the snapshot keeps its single-body fields. Every goal
+    restarts all racers at the spawn, plans once from there and shares the route, so
+    only the controller differs. A racer that fails or times out is DNF.
+    """
+
+    def __init__(self, racers: Sequence[Controller], nav_cfg: NavConfig | None = None) -> None:
+        if not racers:
+            raise ValueError("a race needs at least one racer")
+        self._sessions = [DemoSession(c, nav_cfg=nav_cfg) for c in racers]
+        self._costmap: planner.CostMap | None = None
+        self._spawn = np.zeros(2)
+
+    @property
+    def sessions(self) -> list[DemoSession]:
+        return list(self._sessions)
+
+    @property
+    def leader(self) -> DemoSession:
+        return self._sessions[0]
+
+    def new_map(self, req: MapRequest) -> None:
+        """Generate one world and spawn every racer at its centre."""
+        world = generate(req.to_config(), req.seed)
+        costmap = planner.build_costmap(world)
+        for session in self._sessions:
+            session.use_map(world, costmap, req.seed)
+        self._costmap = costmap
+        self._spawn = self.leader._parts()[0].head_xy
+
+    def goal(self, xy: tuple[float, float]) -> dict[str, Any]:
+        """Plan once from the spawn, restart every racer and give each the route."""
+        if self._costmap is None:
+            raise RuntimeError("no map yet: call new_map() first")
+        result = planner.plan(self._costmap, self._spawn, np.asarray(xy, dtype=np.float64))
+        if isinstance(result, planner.Infeasible):
+            return {"ok": False, "reason": result.reason.name, "detail": result.detail}
+        answers = []
+        for session in self._sessions:
+            session.restart()
+            answers.append(session.goal(xy, plan=result))
+        return answers[0]
+
+    def tick(self, n_steps: int = 1) -> None:
+        """Drive every racer one control step at a time, together."""
+        for _ in range(n_steps):
+            for session in self._sessions:
+                session.tick(1)
+
+    def snapshot(self) -> dict[str, Any]:
+        """Return the leader's snapshot plus one entry per racer under `bodies`."""
+        snaps = [s.snapshot() for s in self._sessions]
+        bodies = [
+            {
+                "label": snap["policy"],
+                "segs": snap["body"],
+                "yaw": snap["yaw"],
+                "trail": snap["trail"],
+                "done": snap["status"] in ("reached", "failed"),
+                "t_finish": snap["sim_time"] if snap["status"] == "reached" else None,
+            }
+            for snap in snaps
+        ]
+        lead = snaps[0]
+        lead["bodies"] = bodies
+        lead["race_over"] = lead["goal"] is not None and all(b["done"] for b in bodies)
+        return lead
+
+    def map_info(self) -> dict[str, Any]:
+        return self.leader.map_info()
+
+    @property
+    def world(self) -> World:
+        return self.leader.world
+
+    @property
+    def map_id(self) -> int:
+        return self.leader.map_id
+
+    def close(self) -> None:
+        for session in self._sessions:
+            session.close()
