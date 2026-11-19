@@ -11,6 +11,9 @@ const UP_M = 0.35;
 const TURN_TAU_S = 1.4;
 const MOVE_TAU_S = 0.5;
 const GOAL_REFRESH_MS = 250;
+// Race ghosts: see-through, lavender for policy snapshots, grey for the baselines.
+const GHOST_OPACITY = 0.35;
+const BASELINES = new Set(['Flat policy', 'Scripted gait']);
 
 export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null) {
   let stop: (() => void) | null = null;
@@ -39,11 +42,12 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
 
     let terrain: any = null;
     let segs: any[] = [];
+    let ghosts: Array<{ sim: any; meshes: any[] }> = [];
     let mapId = -1;
     let sim: any = null;
 
     function disposeWorld(): void {
-      for (const o of [terrain, ...segs]) {
+      for (const o of [terrain, ...segs, ...ghosts.flatMap((g) => g.meshes)]) {
         if (!o) continue;
         scene.remove(o);
         o.geometry.dispose();
@@ -52,13 +56,47 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
       }
       terrain = null;
       segs = [];
+      ghosts = [];
+    }
+
+    // One box per segment of `body`'s worm. Each mesh remembers its body id.
+    function wormMeshes(s: any, material: (i: number) => any): any[] {
+      const meshes: any[] = [];
+      const m = s.model;
+      for (let i = 0; ; i++) {
+        let id: number;
+        try {
+          id = s.geomId(`seg${i}`);
+        } catch {
+          break;
+        }
+        const size = m.geom_size.slice(id * 3, id * 3 + 3);
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(2 * size[0], 2 * size[1], 2 * size[2]), material(i));
+        mesh.userData.body = s.bodyId(`seg${i}`);
+        mesh.matrixAutoUpdate = false;
+        meshes.push(mesh);
+        scene.add(mesh);
+      }
+      return meshes;
+    }
+
+    function place(meshes: any[], s: any): void {
+      const xpos = s.data.xpos;
+      const xmat = s.data.xmat;
+      for (const mesh of meshes) {
+        const b = mesh.userData.body as number;
+        const r = xmat.slice(b * 9, b * 9 + 9);
+        mesh.matrix.set(r[0], r[1], r[2], xpos[b * 3], r[3], r[4], r[5], xpos[b * 3 + 1], r[6], r[7], r[8], xpos[b * 3 + 2], 0, 0, 0, 1);
+      }
     }
 
     const builds = latestRun();
     async function rebuild(engine: Engine): Promise<void> {
       const build = builds.start();
       disposeWorld();
-      sim = [...engine.sims].reverse().find((s) => s.dims().nhfield === 1) ?? null;
+      // In a race every racer has a sim, in racer order. The first is the leader.
+      const worlds = engine.sims.filter((s) => s.dims().nhfield === 1);
+      sim = worlds[0] ?? null;
       if (!sim) return;
       const info = engine.mapInfo();
       const m = sim.model;
@@ -81,22 +119,13 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
       texture.magFilter = THREE.NearestFilter;
       terrain = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ map: texture }));
       scene.add(terrain);
-      for (let i = 0; ; i++) {
-        let id: number;
-        try {
-          id = sim.geomId(`seg${i}`);
-        } catch {
-          break;
-        }
-        const s = m.geom_size.slice(id * 3, id * 3 + 3);
-        const mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(2 * s[0], 2 * s[1], 2 * s[2]),
-          new THREE.MeshLambertMaterial({ color: i === 0 ? 0xb8a2ff : 0x8a72e0 }),
-        );
-        mesh.userData.body = sim.bodyId(`seg${i}`);
-        segs.push(mesh);
-        scene.add(mesh);
-      }
+      segs = wormMeshes(sim, (i) => new THREE.MeshLambertMaterial({ color: i === 0 ? 0xb8a2ff : 0x8a72e0 }));
+      const labels = (engine.snapshot().bodies ?? []).map((b) => b.label);
+      ghosts = worlds.slice(1).map((ghost, k) => {
+        const colour = BASELINES.has(labels[k + 1] ?? '') ? 0x9a98a6 : 0xb79cff;
+        const material = new THREE.MeshLambertMaterial({ color: colour, transparent: true, opacity: GHOST_OPACITY, depthWrite: false });
+        return { sim: ghost, meshes: wormMeshes(ghost, () => material.clone()) };
+      });
       mapId = info.map_id;
     }
 
@@ -126,15 +155,8 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
         drewPaused = true;
       } else drewPaused = false;
       const xpos = sim.data.xpos;
-      const xmat = sim.data.xmat;
-      const q = new THREE.Matrix4();
-      for (const mesh of segs) {
-        const b = mesh.userData.body as number;
-        const r = xmat.slice(b * 9, b * 9 + 9);
-        q.set(r[0], r[1], r[2], xpos[b * 3], r[3], r[4], r[5], xpos[b * 3 + 1], r[6], r[7], r[8], xpos[b * 3 + 2], 0, 0, 0, 1);
-        mesh.matrixAutoUpdate = false;
-        mesh.matrix.copy(q);
-      }
+      place(segs, sim);
+      for (const g of ghosts) if (g.meshes[0]?.visible) place(g.meshes, g.sim);
       const at = (mesh: any): number[] => {
         const b = mesh.userData.body as number;
         return [xpos[b * 3], xpos[b * 3 + 1], xpos[b * 3 + 2]];
@@ -153,8 +175,15 @@ export function createFollowCam(api: BrowserApi, getEngine: () => Engine | null)
       camera.lookAt(...pose.target);
       if (t - lastGoal > GOAL_REFRESH_MS) {
         lastGoal = t;
-        const g = engine.snapshot().goal;
+        const snap = engine.snapshot();
+        const g = snap.goal;
         goal.visible = !!g;
+        // Show a ghost only while it races and the page shows it.
+        const racing = snap.bodies?.length ?? 1;
+        ghosts.forEach((ghost, k) => {
+          const shown = k + 1 < racing && !api.hiddenRacers.has(snap.bodies![k + 1].label);
+          for (const mesh of ghost.meshes) mesh.visible = shown;
+        });
         if (g) goal.position.set(g[0], g[1], 0.05);
       }
       const w = container.clientWidth || 160;

@@ -86,8 +86,8 @@
   .app[data-layout="wide"] .side > * { align-self: stretch; }
   .app[data-layout="wide"] .buttons { margin-top: auto; }
   .app[data-layout="tall"] .stage { grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto var(--m) auto auto; align-content: center;
-    grid-template-areas: "status buttons" "map map" "legend legend" "transport transport"; }
+    grid-template-rows: auto var(--m) auto auto auto; align-content: center;
+    grid-template-areas: "status buttons" "map map" "race race" "legend legend" "transport transport"; }
   .app[data-layout="tall"] .mapwrap { justify-self: stretch; width: auto; }
   .app[data-layout="tight"] .stage { display: block; }
   .app[data-layout="tight"] .mapwrap { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
@@ -129,6 +129,30 @@
   .sw { width: 12px; height: 12px; flex: none; border: 1px solid var(--ground); }
   .sw.stone { background: rgb(150, 150, 155); } .sw.grass { background: rgb(96, 160, 80); }
   .sw.sand { background: rgb(214, 190, 140); } .sw.rock { background: rgb(60, 56, 54); border-color: var(--faint); }
+
+  /* The race: one row per racer, its finish time and its gap to the chosen baseline. */
+  .race { grid-area: race; padding: 10px 12px; align-self: start; z-index: 2; }
+  .race-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .race h2 { margin: 0; font-size: 14px; color: var(--ink); }
+  .compare { display: flex; align-items: center; gap: 4px; color: var(--faint); }
+  .compare .btn { min-height: 28px; padding: 4px 8px; font-size: 13px; }
+  .race ol { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+  .race li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 0 8px; min-height: 24px; }
+  .race li > .row { display: contents; }
+  .race button.row-btn { all: unset; display: contents; cursor: pointer; }
+  .race button.row-btn:focus-visible .name { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .race li[data-shown="false"] { opacity: 0.45; }
+  .race li[data-shown="false"] .name { text-decoration: line-through; }
+  .race .mark { height: 0; border-top: 3px solid currentColor; }
+  .race .name { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .race .time { text-align: right; color: var(--ink); }
+  .race .delta { grid-column: 2 / 4; color: var(--faint); font-size: 12px; margin-top: -2px; }
+  .race .delta:empty { display: none; }
+  .race-note { margin: 8px 0 0; color: var(--faint); font-size: 12px; }
+  .app[data-layout="tall"] .race ol { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px 16px; }
+  .app[data-layout="tight"] .race { display: none; }
+  .app[data-layout="tall"][data-racing] .legend { display: none; }
+  .app[data-layout="wide"] .side.left { overflow-y: auto; }
 
   /* The answer to a click, where the click landed. */
   .verdict { position: absolute; z-index: 3; width: max-content; max-width: min(240px, 70%); padding: 8px 12px;
@@ -192,6 +216,10 @@
     .buttons .label { display: none; }
     .buttons .btn { padding: 6px; min-width: 32px; }
     .hint { font-size: 13px; padding: 2px 8px; }
+    .app[data-racing] .legend, .app[data-racing] .readout, .race-note, .race .delta { display: none; }
+    .race { padding: 8px 10px; }
+    .race ol { margin-top: 4px; gap: 0; }
+    .race li { min-height: 20px; font-size: 13px; }
   }
 
   /* Shown while another data source, such as the browser engine, starts up. */
@@ -243,6 +271,19 @@
         <li><span class="sw rock"></span>Rock</li>
       </ul>
     </section>
+
+    <section class="race notch" id="race" aria-label="Race results" hidden>
+      <div class="race-head">
+        <h2>Race</h2>
+        <div class="compare" role="group" aria-label="Compare finish times against">
+          <span>vs</span>
+          <button class="btn" type="button" data-ref="Flat policy" aria-pressed="true">Flat</button>
+          <button class="btn" type="button" data-ref="Scripted gait" aria-pressed="false">Scripted</button>
+        </div>
+      </div>
+      <ol id="race-list"></ol>
+      <p class="race-note">Policy snapshots from one training run (seed 0). Simulated terrain.</p>
+    </section>
     </div>
 
     <div class="mapwrap" id="mapwrap">
@@ -272,6 +313,10 @@
     </div>
 
     <div class="buttons">
+      <button class="btn" id="race-toggle" type="button" aria-label="Race" title="Race the training snapshots" aria-pressed="true" aria-controls="race" hidden>
+        <svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path d="M2 0h1v7H2zM3 1h4v4H3zM1 7h4v1H1z"/></svg>
+        <span class="label">Race</span>
+      </button>
       <button class="btn" id="cam-toggle" type="button" aria-label="Follow cam" title="Follow cam" aria-pressed="false" aria-controls="cam">
         <svg class="ico" viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M0 2h2V1h4v1h2v5H0zM3 3h2v2H3z"/></svg>
         <span class="label">Follow cam</span>
@@ -367,6 +412,17 @@ let rejected = null;          // world point of the last refused goal
 let cursor = null;            // world point of the keyboard cursor
 let paused = false, camOn = false, camAvailable = true, goalSent = false;
 let verdictTimer = 0;
+// The race. Each racer is styled by its label; any other label gets the faintest ghost style.
+const GHOST = (alpha) => ({colour: `rgba(183, 156, 255, ${alpha})`, dash: []});
+const GREY = "rgba(176, 172, 196, 0.85)";
+const RACE_STYLE = {
+  "Final": {colour: C.ink, dash: []},
+  "9M steps": GHOST(0.85), "4M steps": GHOST(0.65), "1M steps": GHOST(0.5), "Untrained": GHOST(0.35),
+  "Flat policy": {colour: GREY, dash: [6, 4], border: "dashed", baseline: true},
+  "Scripted gait": {colour: GREY, dash: [1, 4], border: "dotted", baseline: true},
+};
+const raceStyle = (label) => RACE_STYLE[label] || GHOST(0.35);
+let racing, hidden = new Set(), compareRef = "Flat policy";
 
 // Pixel convention shared with worm/mapviz.py: pixel x grows with world +x, pixel y grows
 // downward, so world +y is the top of the image. k scales map pixels to canvas pixels.
@@ -406,11 +462,23 @@ function cross(p, half, colour, width) {
   ctx.strokeStyle = colour; ctx.lineWidth = width * dpr(); ctx.beginPath();
   ctx.moveTo(x - h, y - h); ctx.lineTo(x + h, y + h); ctx.moveTo(x + h, y - h); ctx.lineTo(x - h, y + h); ctx.stroke();
 }
+function drawGhosts(bodies) {
+  // Back to front: the untrained ghost first, so better snapshots draw on top.
+  for (const b of bodies.slice(1).reverse()) {
+    if (hidden.has(b.label)) continue;
+    const st = raceStyle(b.label);
+    ctx.setLineDash(st.dash.map((d) => d * dpr()));
+    line(b.trail, st.colour, 1.5);
+    ctx.setLineDash([]);
+    line(b.segs, C.ground, 5); line(b.segs, st.colour, 3);
+  }
+}
 function draw() {
   if (!info || !mapImage || !mapImage.complete || !canvas.width) return;
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(mapImage, 0, 0, canvas.width, canvas.height);
   if (state) {
+    if (state.bodies) drawGhosts(state.bodies);
     line(state.trail || [], "rgba(236, 232, 255, 0.45)", 2);
     const path = state.path || [];
     line(path, C.ground, 5); line(path, C.accent, 2.5);
@@ -530,6 +598,75 @@ function setSpeed(value) {
 document.querySelectorAll("[data-speed]").forEach((b) => b.addEventListener("click", async () => {
   const value = Number(b.dataset.speed); setSpeed(value); await api.control({speed: value});
 }));
+
+// The race: a toggle, one row per racer, and a choice of baseline for the time gaps.
+$("race-toggle").addEventListener("click", async () => {
+  racing = !racing; showRaceToggle();
+  await api.control({race: racing});
+});
+function showRaceToggle() {
+  $("race-toggle").setAttribute("aria-pressed", String(!!racing));
+  $("race").hidden = !racing;
+  if (racing) app.dataset.racing = ""; else delete app.dataset.racing;
+}
+document.querySelectorAll("[data-ref]").forEach((b) => b.addEventListener("click", () => {
+  compareRef = b.dataset.ref;
+  document.querySelectorAll("[data-ref]").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+  if (state) showRace(state);
+}));
+function gap(t, ref) {
+  if (t === null || ref === null) return "";
+  const pct = Math.round(100 * (ref - t) / ref);
+  return pct === 0 ? "same time" : Math.abs(pct) + "% " + (pct > 0 ? "faster" : "slower");
+}
+function raceRow(li, b, ref) {
+  const st = raceStyle(b.label);
+  const time = b.t_finish !== null ? b.t_finish.toFixed(1) + " s" : b.done ? "DNF" : "…";
+  const delta = b.label === compareRef ? "baseline" :
+    !b.done || !ref || !ref.done ? "" :
+    ref.t_finish === null ? (b.t_finish === null ? "" : "baseline DNF") : gap(b.t_finish, ref.t_finish);
+  const key = [b.label, time, delta, hidden.has(b.label)].join("|");
+  if (li.dataset.key === key) return;  // unchanged: keep the DOM and any focus
+  li.dataset.key = key;
+  li.dataset.shown = String(!hidden.has(b.label));
+  let row = li.firstElementChild;
+  if (!row) {
+    row = document.createElement(st.baseline ? "button" : "span");
+    row.className = st.baseline ? "row-btn" : "row";
+    if (st.baseline) {
+      row.type = "button";
+      row.addEventListener("click", async () => {
+        if (hidden.has(b.label)) hidden.delete(b.label); else hidden.add(b.label);
+        await api.control({hidden: [...hidden]});
+        if (state) { showRace(state); draw(); }
+      });
+    }
+    li.append(row);
+  }
+  if (st.baseline) { row.setAttribute("aria-pressed", String(!hidden.has(b.label))); row.title = "Show or hide " + b.label; }
+  const mark = document.createElement("span"); mark.className = "mark";
+  mark.style.color = st.colour; mark.style.borderTopStyle = st.border || "solid";
+  const name = document.createElement("span"); name.className = "name"; name.textContent = b.label;
+  const t = document.createElement("span"); t.className = "time num"; t.textContent = time;
+  const d = document.createElement("span"); d.className = "delta"; d.textContent = delta;
+  row.replaceChildren(mark, name, t, d);
+}
+function showRace(s) {
+  const bodies = s.bodies || [];
+  const list = $("race-list");
+  if (!racing || bodies.length < 2) { list.replaceChildren(); return; }
+  const ref = bodies.find((b) => b.label === compareRef);
+  while (list.children.length > bodies.length) list.lastElementChild.remove();
+  bodies.forEach((b, i) => {
+    let li = list.children[i];
+    if (!li || li.dataset.label !== b.label) {
+      const fresh = document.createElement("li"); fresh.dataset.label = b.label;
+      if (li) li.replaceWith(fresh); else list.append(fresh);
+      li = fresh;
+    }
+    raceRow(li, b, ref);
+  });
+}
 
 // Full screen and a page of its own. The second shows only inside a frame, such as a project card.
 const fullBtn = $("full-toggle");
@@ -662,9 +799,12 @@ async function poll() {
   try {
     await api.ready;
     state = await api.state();
-    if (!synced) { setPaused(!!state.paused); setSpeed(state.speed); synced = true; }
+    if (!synced) {
+      setPaused(!!state.paused); setSpeed(state.speed); synced = true;
+      if (state.racing !== undefined) { racing = state.racing; $("race-toggle").hidden = false; showRaceToggle(); }
+    }
     if (state.map_id !== undefined && state.map_id !== lastMapId) await loadMap();
-    showState(state); draw(); refreshFrame();
+    showState(state); showRace(state); draw(); refreshFrame();
   } catch (e) {
     if (api.boot && api.boot.state === "error") return; // the start-up panel explains it
     $("state-text").dataset.status = "offline"; $("state-label").textContent = "No connection";
