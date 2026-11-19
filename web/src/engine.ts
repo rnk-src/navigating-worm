@@ -136,4 +136,8 @@ export class Engine {
   snapshot(): Snapshot {
     return JSON.parse(this.demo.snapshot());
   }
+  /** A race engine only: race every racer, or drive the leader alone. */
+  setRacing(on: boolean): void {
+    this.demo.set_racing(on);
+  }
 }

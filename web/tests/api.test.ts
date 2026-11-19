@@ -137,3 +137,29 @@ test('paused reports a pause from the host or the user', () => {
   api.hostMessage('resume');
   expect(api.paused).toBe(false);
 });
+
+test('control turns the race on and off and state reports it', async () => {
+  const { engine } = fakeEngine();
+  const seen: boolean[] = [];
+  const api = makeApi();
+  api.attach({ ...engine, setRacing: (on: boolean) => void seen.push(on) });
+  expect((await api.state()).racing).toBe(true);
+  await api.control({ race: false });
+  expect(seen).toEqual([false]);
+  expect((await api.state()).racing).toBe(false);
+});
+
+test('an engine with no race reports racing as unavailable', async () => {
+  const { engine } = fakeEngine();
+  const api = makeApi();
+  api.attach(engine);
+  expect((await api.state()).racing).toBeUndefined();
+});
+
+test('control records which racers the page hides', async () => {
+  const { engine } = fakeEngine();
+  const api = makeApi();
+  api.attach(engine);
+  await api.control({ hidden: ['Flat policy'] });
+  expect([...api.hiddenRacers]).toEqual(['Flat policy']);
+});

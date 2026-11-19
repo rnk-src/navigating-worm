@@ -2,7 +2,8 @@
 // time into control steps, and it reports start-up progress to the start-up panel.
 import type { Engine, GoalAnswer, MapInfo, MapRequest, Snapshot } from './engine';
 
-export type EngineLike = Pick<Engine, 'controlDt' | 'newMap' | 'mapInfo' | 'mapRgb' | 'goal' | 'tick' | 'snapshot'>;
+export type EngineLike = Pick<Engine, 'controlDt' | 'newMap' | 'mapInfo' | 'mapRgb' | 'goal' | 'tick' | 'snapshot'> &
+  Partial<Pick<Engine, 'setRacing'>>;
 
 export const DEFAULT_MAP: MapRequest = { seed: 0, size: 10, mix: [0.4, 0.3, 0.3], slope: 12, rocks: 12, ditches: 2 };
 
@@ -55,6 +56,9 @@ export class BrowserApi {
   private userPaused = false;
   private hostPaused = false;
   private speed = 1;
+  private racing = true;
+  /** Racers the page does not draw. The follow cam hides them too. */
+  hiddenRacers = new Set<string>();
   private acc = 0;
   private readonly now: () => number;
   private readonly makeImageUrl: (rgb: Uint8Array, info: MapInfo) => string;
@@ -141,8 +145,11 @@ export class BrowserApi {
     const engine = this.need();
     return this.makeImageUrl(engine.mapRgb(), engine.mapInfo());
   }
-  async state(): Promise<Snapshot & { paused: boolean; speed: number }> {
-    return { ...this.need().snapshot(), paused: this.userPaused, speed: this.speed };
+  /** `racing` is undefined when the engine has no race. */
+  async state(): Promise<Snapshot & { paused: boolean; speed: number; racing?: boolean }> {
+    const engine = this.need();
+    const racing = engine.setRacing ? this.racing : undefined;
+    return { ...engine.snapshot(), paused: this.userPaused, speed: this.speed, racing };
   }
   async goal(x: number, y: number): Promise<GoalAnswer> {
     return this.need().goal(x, y);
@@ -152,9 +159,14 @@ export class BrowserApi {
     this.acc = 0;
     return engine.newMap(request);
   }
-  async control(body: { pause?: boolean; speed?: number }): Promise<{ ok: true }> {
+  async control(body: { pause?: boolean; speed?: number; race?: boolean; hidden?: string[] }): Promise<{ ok: true }> {
+    if (body.hidden !== undefined) this.hiddenRacers = new Set(body.hidden);
     if (body.pause !== undefined) this.userPaused = body.pause;
     if (body.speed !== undefined) this.speed = body.speed;
+    if (body.race !== undefined && this.engine?.setRacing) {
+      this.racing = body.race;
+      this.engine.setRacing(body.race);
+    }
     return { ok: true };
   }
 }

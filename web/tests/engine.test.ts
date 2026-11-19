@@ -66,4 +66,7 @@ test('a race engine steps every racer on one shared route', { timeout: 240_000 }
   expect(snap.policy).toBe('final');
   expect(snap.bodies?.map((b) => b.label)).toEqual(['final', 'flat', 'scripted']);
   expect(snap.bodies?.every((b) => b.segs.length === snap.body.length && !b.done)).toBe(true);
+  race.setRacing(false);
+  race.tick(5);
+  expect(race.snapshot().bodies?.map((b) => b.label)).toEqual(['final']);
 });

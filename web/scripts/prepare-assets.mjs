@@ -14,6 +14,12 @@ for (const f of fs.readdirSync(path.join(web, 'py')).filter((f) => f.endsWith('.
   fs.copyFileSync(path.join(web, 'py', f), path.join(pub, 'py', f));
 }
 fs.copyFileSync(path.join(repo, 'results/policy_terrain/policy.json'), path.join(pub, 'py/policy.json'));
+// The race ghosts: checkpoints of the run that made the final policy, and the flat v1 baseline.
+fs.mkdirSync(path.join(pub, 'py/race'));
+for (const step of fs.readdirSync(path.join(repo, 'results/race')).filter((d) => d.startsWith('step_'))) {
+  fs.copyFileSync(path.join(repo, 'results/race', step, 'policy.json'), path.join(pub, 'py/race', `${step}.json`));
+}
+fs.copyFileSync(path.join(repo, 'results/policy/policy.json'), path.join(pub, 'py/race/flat.json'));
 fs.cpSync(path.join(repo, 'worm/static/fonts'), path.join(pub, 'fonts'), { recursive: true });
 
 const tmp = fs.mkdtempSync(path.join(web, '.wheel-'));

@@ -104,6 +104,10 @@ class BrowserDemo:
     def snapshot(self) -> str:
         return json.dumps(self._session.snapshot())
 
+    def set_racing(self, on: bool) -> None:
+        if isinstance(self._session, RaceSession):
+            self._session.set_racing(bool(on))
+
     @property
     def control_dt(self) -> float:
         return WormSpec().control_dt
