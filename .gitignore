@@ -12,5 +12,9 @@ checkpoints/
 runs/
 *.log
 
-# Local planning notes
-docs/
+# Agent docs and local notes (never tracked)
+agents/
+CLAUDE.md
+CLAUDE.local.md
+PROGRESS.md
+.claude/
