@@ -335,6 +335,8 @@ class RaceSession:
         self._sessions = [DemoSession(c, nav_cfg=nav_cfg) for c in racers]
         self._costmap: planner.CostMap | None = None
         self._spawn = np.zeros(2)
+        self._racing = True
+        self._goal: tuple[float, float] | None = None
 
     @property
     def sessions(self) -> list[DemoSession]:
@@ -344,6 +346,15 @@ class RaceSession:
     def leader(self) -> DemoSession:
         return self._sessions[0]
 
+    def _active(self) -> list[DemoSession]:
+        return self._sessions if self._racing else self._sessions[:1]
+
+    def set_racing(self, on: bool) -> None:
+        """Race every racer, or drive the leader alone. Turning it on restarts the current goal."""
+        was, self._racing = self._racing, bool(on)
+        if self._racing and not was and self._goal is not None:
+            self.goal(self._goal)
+
     def new_map(self, req: MapRequest) -> None:
         """Generate one world and spawn every racer at its centre."""
         world = generate(req.to_config(), req.seed)
@@ -352,6 +363,7 @@ class RaceSession:
             session.use_map(world, costmap, req.seed)
         self._costmap = costmap
         self._spawn = self.leader._parts()[0].head_xy
+        self._goal = None
 
     def goal(self, xy: tuple[float, float]) -> dict[str, Any]:
         """Plan once from the spawn, restart every racer and give each the route."""
@@ -360,6 +372,7 @@ class RaceSession:
         result = planner.plan(self._costmap, self._spawn, np.asarray(xy, dtype=np.float64))
         if isinstance(result, planner.Infeasible):
             return {"ok": False, "reason": result.reason.name, "detail": result.detail}
+        self._goal = (float(xy[0]), float(xy[1]))
         answers = []
         for session in self._sessions:
             session.restart()
@@ -368,13 +381,14 @@ class RaceSession:
 
     def tick(self, n_steps: int = 1) -> None:
         """Drive every racer one control step at a time, together."""
+        active = self._active()
         for _ in range(n_steps):
-            for session in self._sessions:
+            for session in active:
                 session.tick(1)
 
     def snapshot(self) -> dict[str, Any]:
         """Return the leader's snapshot plus one entry per racer under `bodies`."""
-        snaps = [s.snapshot() for s in self._sessions]
+        snaps = [s.snapshot() for s in self._active()]
         bodies = [
             {
                 "label": snap["policy"],

@@ -75,3 +75,35 @@ def test_the_snapshot_keeps_the_leader_fields_and_is_json() -> None:
     assert snap["policy"] == "lead" and "trail" in snap and "body" in snap
     keys = {"label", "segs", "yaw", "trail", "done", "t_finish"}
     assert all(set(b) == keys for b in snap["bodies"])
+
+
+def test_with_racing_off_only_the_leader_moves_and_shows() -> None:
+    made = race(scripted("lead"), scripted("ghost"))
+    made.set_racing(False)
+    made.goal(GOAL)
+    made.tick(25)
+    lead, ghost = made.sessions
+    assert lead.snapshot()["sim_time"] > 0 and ghost.snapshot()["sim_time"] == 0
+    assert [b["label"] for b in made.snapshot()["bodies"]] == ["lead"]
+
+
+def test_turning_racing_on_restarts_every_racer_on_the_current_goal() -> None:
+    made = race(scripted("lead"), scripted("ghost"))
+    made.set_racing(False)
+    made.goal(GOAL)
+    made.tick(25)
+    made.set_racing(True)
+    snaps = [s.snapshot() for s in made.sessions]
+    assert all(s["sim_time"] == 0 and s["status"] == "driving" for s in snaps)
+    assert snaps[0]["path"] == snaps[1]["path"] != []
+    made.tick(5)
+    assert len(made.snapshot()["bodies"]) == 2
+
+
+def test_a_new_map_forgets_the_goal_so_racing_on_stays_idle() -> None:
+    made = race(scripted("lead"), scripted("ghost"))
+    made.set_racing(False)
+    made.goal(GOAL)
+    made.new_map(SMALL_MAP)
+    made.set_racing(True)
+    assert all(s.snapshot()["status"] == "idle" for s in made.sessions)
