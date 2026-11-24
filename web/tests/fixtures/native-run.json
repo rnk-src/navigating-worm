@@ -1,0 +1,73 @@
+{
+  "request": {
+    "seed": 0,
+    "size": 10,
+    "mix": [
+      0.4,
+      0.3,
+      0.3
+    ],
+    "slope": 12,
+    "rocks": 12,
+    "ditches": 2
+  },
+  "goal": [
+    2.0,
+    1.0
+  ],
+  "n_waypoints": 5,
+  "path_start": [
+    -0.0,
+    0.0
+  ],
+  "path_end": [
+    2.0,
+    1.0
+  ],
+  "run": [
+    {
+      "step": 20,
+      "head": [
+        0.173,
+        0.011
+      ],
+      "yaw": -0.014,
+      "status": "driving",
+      "reached": 0,
+      "sim_time": 1.0
+    },
+    {
+      "step": 60,
+      "head": [
+        0.788,
+        0.007
+      ],
+      "yaw": -0.213,
+      "status": "driving",
+      "reached": 1,
+      "sim_time": 3.0
+    },
+    {
+      "step": 120,
+      "head": [
+        1.364,
+        0.14
+      ],
+      "yaw": 0.639,
+      "status": "driving",
+      "reached": 1,
+      "sim_time": 6.0
+    },
+    {
+      "step": 240,
+      "head": [
+        2.028,
+        0.309
+      ],
+      "yaw": 2.24,
+      "status": "driving",
+      "reached": 3,
+      "sim_time": 12.0
+    }
+  ]
+}

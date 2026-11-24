@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import imageio.v2 as imageio
 import numpy as np
 
 from worm import mapviz, planner
@@ -290,6 +289,8 @@ class DemoSession:
             image = mapviz.world_image(world, px_per_m)
             if blocked:
                 mapviz.draw_blocked(image, world, costmap, px_per_m)
+            import imageio.v2 as imageio  # not needed to load the module; the browser has none
+
             self._png[blocked] = imageio.imwrite("<bytes>", image, format="png")
         return self._png[blocked]
 
@@ -300,5 +301,7 @@ class DemoSession:
         frame = self._env.render()
         if frame is None:
             return None
+        import imageio.v2 as imageio
+
         encoded: bytes = imageio.imwrite("<bytes>", frame, format="jpg")
         return encoded

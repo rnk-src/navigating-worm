@@ -258,9 +258,7 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
 
         start = self.data.ctrl.copy()
         applied = self._servo.command(targets)
-        for k in range(spec.substeps):
-            self.data.ctrl[:] = start + (applied - start) * (k + 1) / spec.substeps
-            friction.step(self.model, self.data, self._friction)
+        self._advance(start, applied)
 
         prev, self._state = self._state, self._step_state()
         value, terms = reward(prev, self._state, act, self._prev_action)
@@ -270,6 +268,17 @@ class WormGoalEnv(gym.Env[NDArray[np.float32], NDArray[np.float32]]):
         outside = self._out_of_world() and not terminated
         truncated = (self._steps >= self.max_steps or outside) and not terminated
         return self._observe(), value, terminated, truncated, self._info(terms, outside)
+
+    def _advance(self, start: Array, applied: Array) -> None:
+        """Run the physics substeps of one control step.
+
+        The servo targets move from `start` to `applied` in equal steps. A host that owns
+        the physics loop, such as the browser demo, replaces this method.
+        """
+        substeps = self.spec_.substeps
+        for k in range(substeps):
+            self.data.ctrl[:] = start + (applied - start) * (k + 1) / substeps
+            friction.step(self.model, self.data, self._friction)
 
     def _out_of_world(self) -> bool:
         if self._world is None:
